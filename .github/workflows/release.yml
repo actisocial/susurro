@@ -1,0 +1,210 @@
+name: Release
+
+# Publica un .dmg cuando se empuja una etiqueta `vX.Y.Z`.
+#
+# Sobre el costo: este workflow corre en `macos-15`, que es un runner estándar
+# de GitHub. La documentación de GitHub es explícita en que «el uso de los
+# runners estándar alojados por GitHub es gratuito e ilimitado en repositorios
+# públicos», y que lo único que se cobra en público son los *larger runners*
+# (los de más núcleos que se configuran a nivel de organización). Mientras este
+# repositorio sea público y no se cambie `runs-on` por un runner grande, no
+# consume la cuota de la organización.
+#
+# Lo que sí aplica en público es un límite de concurrencia: 5 trabajos de macOS
+# en paralelo. Es un límite de simultaneidad, no de minutos.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Etiqueta a publicar (por ejemplo v1.0.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Elegir Xcode
+        run: |
+          # `latest-stable` evita quedar clavado a una versión que GitHub
+          # eventualmente retira de la imagen.
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+          swift --version
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Toolchain de Metal
+        run: |
+          # MLX compila sus propios shaders de Metal durante el build, y desde
+          # Xcode 26 ese toolchain es un componente aparte que no siempre viene
+          # en la imagen del runner. Sin él, el build falla con
+          # "cannot execute tool 'metal'".
+          if xcrun -f metal >/dev/null 2>&1; then
+            echo "ya presente"
+          else
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+
+      - name: Resolver la versión
+        id: version
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Compilar
+        run: |
+          xcodegen generate --quiet
+          set -o pipefail
+          xcodebuild \
+            -project Susurro.xcodeproj \
+            -scheme Susurro \
+            -configuration Release \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath build/dd \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            MARKETING_VERSION="${{ steps.version.outputs.version }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | grep -E "error:|warning: .*Sendable|BUILD" || true
+          test -d build/dd/Build/Products/Release/Susurro.app
+
+      - name: Firmar
+        env:
+          CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+        run: |
+          APP=build/dd/Build/Products/Release/Susurro.app
+
+          if [ -z "$CERTIFICATE" ]; then
+            # Sin certificado de Developer ID, lo honesto es firmar ad-hoc y
+            # decirlo. Una firma ad-hoc no acredita a nadie: sirve para que el
+            # binario tenga una identidad de código estable (que macOS necesita
+            # para recordar los permisos de micrófono y accesibilidad), pero no
+            # levanta la advertencia de Gatekeeper al descargarla.
+            echo "::notice::Sin certificado de Developer ID: se firma ad-hoc. La app va a mostrar la advertencia de desarrollador no verificado."
+            codesign --force --deep --options runtime \
+              --entitlements Susurro/Susurro.entitlements \
+              --sign - "$APP"
+          else
+            # Con certificado: llavero temporal, firmar, y borrarlo al final del
+            # job. El llavero nunca toca el disco compartido del runner.
+            KEYCHAIN="$RUNNER_TEMP/build.keychain"
+            KEYCHAIN_PASSWORD=$(uuidgen)
+
+            security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+            security set-keychain-settings -lut 900 "$KEYCHAIN"
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
+            echo "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+            security import "$RUNNER_TEMP/cert.p12" \
+              -k "$KEYCHAIN" -P "$CERTIFICATE_PASSWORD" \
+              -T /usr/bin/codesign
+            security set-key-partition-list \
+              -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+            security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+
+            codesign --force --deep --options runtime --timestamp \
+              --entitlements Susurro/Susurro.entitlements \
+              --sign "$SIGNING_IDENTITY" "$APP"
+
+            rm -f "$RUNNER_TEMP/cert.p12"
+          fi
+
+          codesign --verify --strict --verbose=2 "$APP"
+
+      - name: Empaquetar el .dmg
+        run: |
+          chmod +x Tools/make-dmg.sh
+          Tools/make-dmg.sh \
+            build/dd/Build/Products/Release/Susurro.app \
+            "Susurro-${{ steps.version.outputs.version }}.dmg"
+
+      - name: Notarizar
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          if [ -z "$APPLE_ID" ]; then
+            echo "::notice::Sin credenciales de Apple: se omite la notarización."
+            exit 0
+          fi
+
+          DMG="Susurro-${{ steps.version.outputs.version }}.dmg"
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --wait
+
+          # El grapado incrusta el ticket en el .dmg, así Gatekeeper lo valida
+          # sin consultar a Apple. Es lo que hace que la app abra sin advertencia
+          # incluso sin conexión.
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+
+      - name: Limpiar el llavero
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/build.keychain" 2>/dev/null || true
+
+      - name: Publicar la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Los secretos van por el entorno y nunca interpolados dentro del
+          # script. Interpolarlos los mete literalmente en la línea de comando,
+          # donde pueden terminar en un log o en la lista de procesos del runner.
+          # Acá solo se necesita saber si existe, no su valor.
+          HAS_APPLE_CREDENTIALS: ${{ secrets.APPLE_ID != '' }}
+        run: |
+          DMG="Susurro-${{ steps.version.outputs.version }}.dmg"
+          TAG="${{ steps.version.outputs.tag }}"
+
+          if [ "$HAS_APPLE_CREDENTIALS" = "true" ]; then
+            SIGNING_NOTE="Firmada con Developer ID y notarizada por Apple."
+          else
+            SIGNING_NOTE=$'**Esta compilación no está notarizada.** La primera vez, macOS va a decir que no puede verificar al desarrollador.\n\nPara abrirla: Ajustes del Sistema › Privacidad y seguridad › «Abrir de todos modos». O desde la terminal: `xattr -dr com.apple.quarantine /Applications/Susurro.app`\n\nSi preferís no confiar en un binario, el código es abierto: `make install` lo compila y lo firma con tu propia identidad.'
+          fi
+
+          cat > notes.md <<EOF
+          ## Susurro $TAG
+
+          Dictado por voz local para macOS. Mantené una tecla, hablá, soltá.
+
+          $SIGNING_NOTE
+
+          ### Requisitos
+          - macOS 14 o superior
+          - Apple Silicon
+
+          ### Primera ejecución
+          Susurro pide micrófono y accesibilidad, y explica para qué sirve cada uno
+          antes de pedirlo. Los modelos se descargan cuando los elegís en Ajustes;
+          nada se descarga sin que lo pidas.
+          EOF
+
+          # `--verify-tag` solo cuando la etiqueta ya existe (disparo por push).
+          # Con `workflow_dispatch` la etiqueta puede no estar creada y el flag
+          # haría fallar la publicación.
+          EXTRA=""
+          if [ "${{ github.event_name }}" = "push" ]; then
+            EXTRA="--verify-tag"
+          fi
+
+          gh release create "$TAG" "$DMG" \
+            --title "Susurro $TAG" \
+            --notes-file notes.md \
+            $EXTRA

@@ -1,0 +1,85 @@
+name: CI
+
+# Compila y corre los tests en cada push y cada pull request.
+#
+# Gratuito e ilimitado mientras el repositorio sea público y `runs-on` apunte a
+# un runner estándar de GitHub. Ver el comentario largo en release.yml.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Un push nuevo sobre la misma rama cancela el build anterior. Sin esto, tres
+# commits seguidos ocupan los tres slots de macOS que hay disponibles y el
+# tercero espera a que terminen builds que ya no le importan a nadie.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Toolchain de Metal
+        run: |
+          # Lo necesita MLX para compilar sus shaders. Ver release.yml.
+          if ! xcrun -f metal >/dev/null 2>&1; then
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+
+      - name: Compilar
+        run: |
+          xcodegen generate --quiet
+          set -o pipefail
+          xcodebuild \
+            -project Susurro.xcodeproj \
+            -scheme Susurro \
+            -configuration Release \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath build/dd \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | grep -E "error:|BUILD" || true
+          test -d build/dd/Build/Products/Release/Susurro.app
+
+      - name: Tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project Susurro.xcodeproj \
+            -scheme Susurro \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath build/dd \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee test.log \
+            | grep -E "error:|Test .*(passed|failed)|recorded an issue" || true
+
+          # Swift Testing no informa por el canal de XCTest —ahí siempre dice
+          # "Executed 0 tests"—, así que el veredicto se saca de sus propias
+          # líneas. Sin esto, un test roto pasaría el CI en verde.
+          FAILED=$(grep -c "recorded an issue" test.log; true)
+          PASSED=$(grep -c 'Test ".*" passed' test.log; true)
+          echo "::notice::$PASSED tests pasaron, $FAILED fallaron"
+          [ "$FAILED" -eq 0 ]
+
+      - name: Verificar que el catálogo de cadenas esté al día
+        run: |
+          # Si alguien agrega texto visible y no lo traduce, esto lo dice en el
+          # pull request en vez de que aparezca en español en una app en inglés.
+          python3 Tools/localize.py --check || echo "::warning::Hay cadenas sin traducir al inglés"

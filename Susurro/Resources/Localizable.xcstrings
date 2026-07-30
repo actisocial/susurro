@@ -1,0 +1,1430 @@
+{
+  "sourceLanguage": "es",
+  "strings": {
+    "": {},
+    "%@ necesita una versión más nueva de macOS.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ needs a newer version of macOS."
+          }
+        }
+      }
+    },
+    "%@ tiene activada la entrada segura. El texto quedó en el portapapeles: pegalo con ⌘V.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ has secure input enabled. The text is on the clipboard — paste it with ⌘V."
+          }
+        }
+      }
+    },
+    "%@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@ · %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "25 idiomas europeos, incluido español": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "25 European languages, Spanish included"
+          }
+        }
+      }
+    },
+    "30 idiomas que gestiona macOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 languages managed by macOS"
+          }
+        }
+      }
+    },
+    "Abrir Ajustes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
+    "Abrir Ajustes del Sistema": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings"
+          }
+        }
+      }
+    },
+    "Abrir Susurro al iniciar sesión": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Susurro at login"
+          }
+        }
+      }
+    },
+    "Accesibilidad": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility"
+          }
+        }
+      }
+    },
+    "Accesibilidad habilitada": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility enabled"
+          }
+        }
+      }
+    },
+    "Accesibilidad hace falta para dos cosas: escuchar la tecla aunque estés en otra app, y pegar el texto donde tenés el cursor. Sin ese permiso Susurro transcribe igual, pero deja el texto en el portapapeles.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility is needed for two things: hearing the key while you're in another app, and pasting the text where your cursor is. Without it Susurro still transcribes, but leaves the text on the clipboard."
+          }
+        }
+      }
+    },
+    "Acerca de": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        }
+      }
+    },
+    "Además arma párrafos o listas cuando el dictado lo pide.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also breaks text into paragraphs or lists when the dictation calls for it."
+          }
+        }
+      }
+    },
+    "Ajustes de Susurro": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Susurro Settings"
+          }
+        }
+      }
+    },
+    "Ajustes…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings…"
+          }
+        }
+      }
+    },
+    "Almacenamiento": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storage"
+          }
+        }
+      }
+    },
+    "Apache-2.0": {},
+    "Atajo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortcut"
+          }
+        }
+      }
+    },
+    "Atajo personalizado": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom shortcut"
+          }
+        }
+      }
+    },
+    "Automático": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        }
+      }
+    },
+    "Bibliotecas": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libraries"
+          }
+        }
+      }
+    },
+    "Bienvenido a Susurro": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome to Susurro"
+          }
+        }
+      }
+    },
+    "Borrar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        }
+      }
+    },
+    "Cambiaste de app mientras se transcribía. El texto quedó en el portapapeles: pegalo con ⌘V.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You switched apps while it was transcribing. The text is on the clipboard — paste it with ⌘V."
+          }
+        }
+      }
+    },
+    "Cerca de 100 idiomas": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Around 100 languages"
+          }
+        }
+      }
+    },
+    "Cero descarga: usa el motor que ya trae macOS. Ideal para probar la app al instante.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No download: uses the engine macOS already ships. Good for trying the app right away."
+          }
+        }
+      }
+    },
+    "Comando derecho (⌘)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right Command (⌘)"
+          }
+        }
+      }
+    },
+    "Con estructura": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Structured"
+          }
+        }
+      }
+    },
+    "Continuar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        }
+      }
+    },
+    "Control derecho (⌃)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right Control (⌃)"
+          }
+        }
+      }
+    },
+    "Corrige puntuación y mayúsculas y saca muletillas, sin tocar lo que dijiste.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixes punctuation and capitalization and removes filler words, without touching what you said."
+          }
+        }
+      }
+    },
+    "Cómo dictar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How to dictate"
+          }
+        }
+      }
+    },
+    "Dar acceso al micrófono": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow microphone access"
+          }
+        }
+      }
+    },
+    "Descargado": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded"
+          }
+        }
+      }
+    },
+    "Descargando %@: %lld%%": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading %@: %lld%%"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Descargando %1$@: %2$lld%%"
+          }
+        }
+      }
+    },
+    "Detalles": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        }
+      }
+    },
+    "Devolver el portapapeles a como estaba": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore the clipboard afterwards"
+          }
+        }
+      }
+    },
+    "Dictado del sistema": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System dictation"
+          }
+        }
+      }
+    },
+    "Dictar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictate"
+          }
+        }
+      }
+    },
+    "Dos toques rápidos dejan el dictado enganchado.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two quick taps latch dictation on."
+          }
+        }
+      }
+    },
+    "El equilibrio recomendado: rápido, preciso y multilingüe.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The recommended balance: fast, accurate and multilingual."
+          }
+        }
+      }
+    },
+    "El formato del micrófono no es compatible: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone format isn't supported: %@"
+          }
+        }
+      }
+    },
+    "El mismo modelo con menos peso en disco; pierde un poco de precisión.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The same model with a smaller footprint; slightly less accurate."
+          }
+        }
+      }
+    },
+    "El modelo quedó incompleto. Volvé a descargarlo desde Ajustes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The model download is incomplete. Download it again from Settings."
+          }
+        }
+      }
+    },
+    "El modelo todavía no está descargado.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The model hasn't been downloaded yet."
+          }
+        }
+      }
+    },
+    "El motor no está disponible: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The engine isn't available: %@"
+          }
+        }
+      }
+    },
+    "El más liviano y el más rápido, si dictás únicamente en inglés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The smallest and fastest, if you dictate only in English."
+          }
+        }
+      }
+    },
+    "El recomendado. Es el que limpia bien el español sin desviarse a responderte.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The recommended one. It cleans Spanish properly without drifting into answering you."
+          }
+        }
+      }
+    },
+    "El sistema usa 🌐 para cambiar el idioma o mostrar emoji. Poné «No hacer nada» en Ajustes › Teclado para que quede libre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The system uses 🌐 to switch input source or show emoji. Set it to \"Do Nothing\" in Settings › Keyboard to free it up."
+          }
+        }
+      }
+    },
+    "Elegí tu tecla": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick your key"
+          }
+        }
+      }
+    },
+    "Empezar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get started"
+          }
+        }
+      }
+    },
+    "Empezás con %@. En Ajustes podés cambiar a un modelo más preciso cuando quieras.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're starting with %@. You can switch to a more accurate model in Settings whenever you like."
+          }
+        }
+      }
+    },
+    "Es para escuchar lo que dictás. El audio se procesa acá mismo y se descarta apenas se transcribe: no se guarda ni se envía a ningún lado.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's to hear what you dictate. The audio is processed right here and discarded as soon as it's transcribed: nothing is stored, nothing is sent anywhere."
+          }
+        }
+      }
+    },
+    "Esc cancela sin insertar nada.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esc cancels without inserting anything."
+          }
+        }
+      }
+    },
+    "Escuchando (manos libres). Apretá otra vez para terminar.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening (hands-free). Press again to finish."
+          }
+        }
+      }
+    },
+    "Escuchando… Soltá para transcribir.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening… Release to transcribe."
+          }
+        }
+      }
+    },
+    "Español": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spanish"
+          }
+        }
+      }
+    },
+    "Falló la transcripción: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription failed: %@"
+          }
+        }
+      }
+    },
+    "Falta el permiso de Accesibilidad. El texto quedó en el portapapeles: pegalo con ⌘V.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility permission is missing. The text is on the clipboard — paste it with ⌘V."
+          }
+        }
+      }
+    },
+    "Falta grabar el atajo. Hacé clic en el recuadro y apretá la combinación.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No shortcut recorded yet. Click the field and press your key combination."
+          }
+        }
+      }
+    },
+    "Faltan permisos…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Missing permissions…"
+          }
+        }
+      }
+    },
+    "Fijar un idioma mejora un poco la precisión. Dejalo en automático si mezclás idiomas al hablar.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pinning a language improves accuracy slightly. Leave it on automatic if you mix languages when you speak."
+          }
+        }
+      }
+    },
+    "FluidAudio · Apache-2.0": {},
+    "General": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "General"
+          }
+        }
+      }
+    },
+    "Globo / Fn (🌐)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Globe / Fn (🌐)"
+          }
+        }
+      }
+    },
+    "Hace falta para dos cosas: escuchar la tecla de dictado aunque estés escribiendo en otra app, y pegar el texto donde tenés el cursor. Susurro no lee lo que escribís ni lo que hay en pantalla.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's needed for two things: hearing the dictation key even while you're typing in another app, and pasting the text where your cursor is. Susurro does not read what you type or what's on your screen."
+          }
+        }
+      }
+    },
+    "Hace que los dictados encadenados arranquen al instante, pero deja el punto naranja de micrófono encendido y baja la calidad del audio en auriculares Bluetooth.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makes back-to-back dictations start instantly, but keeps the orange microphone dot lit and degrades audio quality on Bluetooth headphones."
+          }
+        }
+      }
+    },
+    "Hay un campo de contraseña activo. El texto quedó en el portapapeles: pegalo con ⌘V.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A password field is active. The text is on the clipboard — paste it with ⌘V."
+          }
+        }
+      }
+    },
+    "Idioma": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        }
+      }
+    },
+    "Idioma del dictado": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictation language"
+          }
+        }
+      }
+    },
+    "Inglés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
+          }
+        }
+      }
+    },
+    "Inserta la transcripción tal cual. La latencia más baja posible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserts the transcript as-is. The lowest possible latency."
+          }
+        }
+      }
+    },
+    "KeyboardShortcuts · MIT": {},
+    "La transcripción se colgó. Probá con otro modelo en Ajustes.": {},
+    "Ligero": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        }
+      }
+    },
+    "Limpieza del texto": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text cleanup"
+          }
+        }
+      }
+    },
+    "Listo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "MIT": {},
+    "MLX Swift · MIT": {},
+    "Mantenela apretada mientras hablás y soltala para insertar el texto. Dos toques rápidos dejan el dictado enganchado hasta que la vuelvas a apretar. Esc cancela.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold it down while you speak and release to insert the text. Two quick taps latch dictation on until you press it again. Esc cancels."
+          }
+        }
+      }
+    },
+    "Mantenela apretada mientras hablás y soltala.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold it down while you speak, then release."
+          }
+        }
+      }
+    },
+    "Mantener el micrófono listo entre dictados": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep the microphone ready between dictations"
+          }
+        }
+      }
+    },
+    "Mantené %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold %@"
+          }
+        }
+      }
+    },
+    "Mantené una tecla, hablá, soltá. El texto aparece donde tengas el cursor.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold a key, speak, release. The text appears wherever your cursor is."
+          }
+        }
+      }
+    },
+    "Micrófono": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone"
+          }
+        }
+      }
+    },
+    "Micrófono habilitado": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone enabled"
+          }
+        }
+      }
+    },
+    "Modelo de refinado": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cleanup model"
+          }
+        }
+      }
+    },
+    "Modelo: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model: %@"
+          }
+        }
+      }
+    },
+    "Modelos": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models"
+          }
+        }
+      }
+    },
+    "Modelos descargados": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded models"
+          }
+        }
+      }
+    },
+    "Mostrar en el Finder": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show in Finder"
+          }
+        }
+      }
+    },
+    "Más liviano y más rápido, pero limpia bastante menos. Mejor en inglés que en español.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lighter and faster, but cleans up noticeably less. Better in English than in Spanish."
+          }
+        }
+      }
+    },
+    "No escuché nada.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I didn't hear anything."
+          }
+        }
+      }
+    },
+    "No hay espacio suficiente: hacen falta %@ y quedan %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough space: %@ needed, %@ available."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "No hay espacio suficiente: hacen falta %1$@ y quedan %2$@."
+          }
+        }
+      }
+    },
+    "No hay ningún micrófono disponible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No microphone is available."
+          }
+        }
+      }
+    },
+    "No se pudo descargar el modelo: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't download the model: %@"
+          }
+        }
+      }
+    },
+    "No se pudo iniciar la captura de audio: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't start audio capture: %@"
+          }
+        }
+      }
+    },
+    "No se pudo pegar en esta app. El texto quedó en el portapapeles: pegalo con ⌘V.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't paste into this app. The text is on the clipboard — paste it with ⌘V."
+          }
+        }
+      }
+    },
+    "Ojo: en el teclado estadounidense, Opción es la tecla de acentos (⌥+e da «é»). Susurro se hace a un lado al detectar la segunda tecla, pero si escribís mucho en español conviene otra.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heads up: on the US keyboard layout, Option is the accent key (⌥+e gives \"é\"). Susurro steps aside as soon as it sees the second key, but if you write a lot in Spanish, pick another one."
+          }
+        }
+      }
+    },
+    "Ojo: ese atajo es el de «%@» en todas las apps de macOS. Si lo usás para dictar, deja de funcionar en el resto del sistema.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heads up: that shortcut means \"%@\" in every macOS app. If you use it to dictate, it stops working everywhere else."
+          }
+        }
+      }
+    },
+    "Opción derecha (⌥)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right Option (⌥)"
+          }
+        }
+      }
+    },
+    "Para idiomas que Parakeet no cubre. Más lento y puede inventar texto sobre silencio.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For languages Parakeet doesn't cover. Slower, and it can invent text over silence."
+          }
+        }
+      }
+    },
+    "Parakeet 110M (solo inglés)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parakeet 110M (English only)"
+          }
+        }
+      }
+    },
+    "Parakeet TDT v3 (compacto)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parakeet TDT v3 (compact)"
+          }
+        }
+      }
+    },
+    "Parakeet corre en el Neural Engine: es más rápido que Whisper y más preciso en español, y deja la GPU libre para el refinado. Whisper está para los idiomas que Parakeet no cubre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parakeet runs on the Neural Engine: faster than Whisper, more accurate in Spanish, and it leaves the GPU free for cleanup. Whisper is there for the languages Parakeet doesn't cover."
+          }
+        }
+      }
+    },
+    "Permisos": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permissions"
+          }
+        }
+      }
+    },
+    "Podés comprobarlo: desconectá el wifi después de bajar el modelo y seguí dictando.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can verify it: turn off Wi-Fi after downloading the model and keep dictating."
+          }
+        }
+      }
+    },
+    "Preparando el modelo… %lld%%": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing the model… %lld%%"
+          }
+        }
+      }
+    },
+    "Propietario de Apple": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple proprietary"
+          }
+        }
+      }
+    },
+    "Puliendo…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polishing…"
+          }
+        }
+      }
+    },
+    "Qwen3 — Alibaba Cloud": {},
+    "Reconocimiento de voz": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech recognition"
+          }
+        }
+      }
+    },
+    "Refinado": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cleanup"
+          }
+        }
+      }
+    },
+    "Refinado: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cleanup: %@"
+          }
+        }
+      }
+    },
+    "Reiniciar Susurro": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restart Susurro"
+          }
+        }
+      }
+    },
+    "Salir de Susurro": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit Susurro"
+          }
+        }
+      }
+    },
+    "Se desconectó el micrófono durante el dictado.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone was disconnected mid-dictation."
+          }
+        }
+      }
+    },
+    "Si el modelo tarda más de un segundo y medio, o si devuelve algo que no se parece a lo que dictaste, Susurro descarta el refinado e inserta la transcripción cruda. Nunca vas a recibir una respuesta del modelo en vez de tu texto.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If the model takes longer than a second and a half, or returns something that doesn't resemble what you dictated, Susurro discards the cleanup and inserts the raw transcript. You will never get the model's answer instead of your text."
+          }
+        }
+      }
+    },
+    "Si ya lo activaste y sigue en rojo, hay que reiniciar Susurro para que macOS lo tome.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you've already enabled it and it's still red, Susurro has to restart for macOS to pick it up."
+          }
+        }
+      }
+    },
+    "Silero VAD": {},
+    "Sin descarga": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No download"
+          }
+        }
+      }
+    },
+    "Sin refinar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No cleanup"
+          }
+        }
+      }
+    },
+    "Solo inglés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English only"
+          }
+        }
+      }
+    },
+    "Sonidos al empezar y terminar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sounds when starting and finishing"
+          }
+        }
+      }
+    },
+    "Susurro": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Susurro"
+          }
+        }
+      }
+    },
+    "Susurro necesita acceso al micrófono.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Susurro needs microphone access."
+          }
+        }
+      }
+    },
+    "Susurro necesita el micrófono": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Susurro needs the microphone"
+          }
+        }
+      }
+    },
+    "Susurro transcribe lo que dictás usando modelos que corren en tu Mac. El audio no sale del dispositivo: no hay servidor, no hay cuenta y no hay historial. La única vez que Susurro usa la red es para descargar un modelo, y siempre porque vos se lo pediste.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Susurro transcribes what you dictate using models that run on your Mac. The audio never leaves the device: no server, no account, no history. The only time Susurro uses the network is to download a model, and always because you asked it to."
+          }
+        }
+      }
+    },
+    "Susurro — mantené %@ para dictar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Susurro — hold %@ to dictate"
+          }
+        }
+      }
+    },
+    "Tecla para dictar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictation key"
+          }
+        }
+      }
+    },
+    "Terminar dictado": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop dictating"
+          }
+        }
+      }
+    },
+    "Todo pasa acá": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything happens here"
+          }
+        }
+      }
+    },
+    "Todo pasa en tu Mac. El audio no sale de acá: no hay servidor, no hay cuenta y no se guarda nada.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything happens on your Mac. The audio never leaves: no server, no account, nothing stored."
+          }
+        }
+      }
+    },
+    "Transcribiendo…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcribing…"
+          }
+        }
+      }
+    },
+    "Transcripción cancelada.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transcription cancelled."
+          }
+        }
+      }
+    },
+    "WhisperKit (argmax-oss-swift) · MIT": {},
+    "Y el permiso de Accesibilidad": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "And the Accessibility permission"
+          }
+        }
+      }
+    },
+    "de 0,3 a 0,6 s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.3 to 0.6 s"
+          }
+        }
+      }
+    },
+    "de 0,7 a 1,2 s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.7 to 1.2 s"
+          }
+        }
+      }
+    },
+    "el dictado del sistema no está disponible en esta Mac": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "system dictation isn't available on this Mac"
+          }
+        }
+      }
+    },
+    "el sistema no ofreció un formato de audio compatible": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "the system didn't offer a compatible audio format"
+          }
+        }
+      }
+    },
+    "el sistema no reconoce ni español ni inglés en esta Mac": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "the system doesn't support Spanish or English on this Mac"
+          }
+        }
+      }
+    },
+    "macOS necesita que lo apruebes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS needs you to approve it."
+          }
+        }
+      }
+    },
+    "macOS tiene bloqueado el acceso de Susurro al portapapeles, así que no se puede restaurar. Se puede cambiar en Ajustes del Sistema › Privacidad y seguridad › Pegado desde otras apps.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS is blocking Susurro's access to the clipboard, so it can't be restored. You can change that in System Settings › Privacy & Security › Paste from Other Apps."
+          }
+        }
+      }
+    },
+    "no hay conexión a internet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "there's no internet connection"
+          }
+        }
+      }
+    },
+    "no se pudo cargar el detector de voz: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "couldn't load the voice detector: %@"
+          }
+        }
+      }
+    },
+    "no se pudo convertir el audio al formato del sistema": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "couldn't convert the audio to the system's format"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -1,0 +1,143 @@
+name: Susurro
+
+options:
+  bundleIdPrefix: com.acti
+  deploymentTarget:
+    macOS: "14.0"
+  developmentLanguage: es
+  createIntermediateGroups: true
+  groupSortPosition: top
+  generateEmptyDirectories: false
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    # Solo Apple Silicon, y no por comodidad: los modelos de Parakeet son CoreML
+    # compilados para el Neural Engine, y MLX necesita el Metal de las GPU de
+    # Apple. En un Intel la app no tendría con qué correr. Declararlo acá evita
+    # además compilar todo dos veces, que duplicaba el tiempo de build.
+    ARCHS: arm64
+    ONLY_ACTIVE_ARCH: NO
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEAD_CODE_STRIPPING: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    SWIFT_STRICT_CONCURRENCY: complete
+    # Extrae las cadenas del código al catálogo en cada build. Es lo que hace
+    # que las claves con interpolación queden con los marcadores de formato
+    # correctos, que escritos a mano se equivocan siempre.
+    SWIFT_EMIT_LOC_STRINGS: YES
+    # Susurro necesita CGEventTap y la API de Accesibilidad para el hotkey
+    # global y la inserción de texto; ninguna de las dos funciona dentro del
+    # App Sandbox. Por eso se distribuye firmada con Developer ID + hardened
+    # runtime en vez de por la Mac App Store.
+    ENABLE_APP_SANDBOX: NO
+    ENABLE_HARDENED_RUNTIME: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+packages:
+  FluidAudio:
+    url: https://github.com/FluidInference/FluidAudio
+    from: 0.15.5
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: 1.17.0
+  # WhisperKit vive acá desde el renombre a argmax-oss-swift en la 1.0.0.
+  ArgmaxOSS:
+    url: https://github.com/argmaxinc/argmax-oss-swift
+    from: 1.0.0
+  # La biblioteca de LLM de MLX, separada de mlx-swift-examples. Trae Qwen3.5
+  # ya registrado. No incluye descargador ni tokenizador: se integran aparte,
+  # que es como está diseñada.
+  MLXSwiftLM:
+    url: https://github.com/ml-explore/mlx-swift-lm
+    from: 3.31.4
+  SwiftHuggingFace:
+    url: https://github.com/huggingface/swift-huggingface
+    from: 0.9.0
+  SwiftTransformers:
+    url: https://github.com/huggingface/swift-transformers
+    from: 1.3.3
+
+targets:
+  Susurro:
+    type: application
+    platform: macOS
+    sources:
+      - path: Susurro/Sources
+      - path: Susurro/Resources
+        buildPhase: resources
+    dependencies:
+      - package: FluidAudio
+        product: FluidAudio
+      - package: KeyboardShortcuts
+        product: KeyboardShortcuts
+      - package: ArgmaxOSS
+        product: WhisperKit
+      - package: MLXSwiftLM
+        product: MLXLLM
+      - package: MLXSwiftLM
+        product: MLXLMCommon
+      - package: MLXSwiftLM
+        product: MLXHuggingFace
+      - package: SwiftHuggingFace
+        product: HuggingFace
+      - package: SwiftTransformers
+        product: Tokenizers
+    entitlements:
+      path: Susurro/Susurro.entitlements
+      properties:
+        # Requerido por el hardened runtime para abrir el micrófono.
+        com.apple.security.device.audio-input: true
+    info:
+      path: Susurro/Info.plist
+      properties:
+        CFBundleName: Susurro
+        CFBundleDisplayName: Susurro
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleIconName: AppIcon
+        # Agente de fondo: sin ícono en el Dock, sin ventana principal.
+        # Toda la presencia de la app es el ítem en la barra de menús.
+        LSUIElement: true
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        NSHumanReadableCopyright: ""
+        NSMicrophoneUsageDescription: "Susurro usa el micrófono para transcribir lo que dictás. El audio se procesa en tu Mac y nunca sale del dispositivo."
+        NSSupportsAutomaticTermination: false
+        NSSupportsSuddenTermination: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.acti.susurro
+        PRODUCT_NAME: Susurro
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        # La firma la hace el Makefile con codesign después de compilar, para
+        # que el designated requirement quede estable y TCC no vuelva a pedir
+        # permisos en cada rebuild.
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: NO
+
+  SusurroTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Susurro/Tests
+    dependencies:
+      - target: Susurro
+    settings:
+      base:
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Susurro.app/Contents/MacOS/Susurro
+
+schemes:
+  Susurro:
+    build:
+      targets:
+        Susurro: all
+        SusurroTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets: [SusurroTests]
