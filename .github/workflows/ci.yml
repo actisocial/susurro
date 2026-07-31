@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
 
     steps:
@@ -28,8 +28,18 @@ jobs:
 
       - name: Preparar Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode.app
+          # Ver release.yml: el SDK de macOS 26 es un requisito duro, así que se
+          # comprueba antes de compilar y no veinte minutos después.
+          NEWEST=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          sudo xcode-select -s "${NEWEST:-/Applications/Xcode.app}"
           xcodebuild -version
+
+          SDK=$(xcrun --sdk macosx --show-sdk-version)
+          echo "::notice::SDK de macOS $SDK"
+          if [ "${SDK%%.*}" -lt 26 ]; then
+            echo "::error::Hace falta el SDK de macOS 26 o posterior; hay $SDK"
+            exit 1
+          fi
 
       - name: Instalar XcodeGen
         run: brew install xcodegen
@@ -44,7 +54,13 @@ jobs:
       - name: Compilar
         run: |
           xcodegen generate --quiet
-          set -o pipefail
+
+          # El estado se captura aparte en vez de encadenar con `grep`, porque
+          # `grep` devuelve 1 cuando no encuentra nada y eso mezcla dos cosas
+          # que no tienen relación: si hubo coincidencias en el log y si el
+          # build funcionó. Antes esto terminaba en `|| true`, que descartaba
+          # las dos, y así CI estuvo en verde con el build roto.
+          set +e
           xcodebuild \
             -project Susurro.xcodeproj \
             -scheme Susurro \
@@ -54,8 +70,26 @@ jobs:
             -skipPackagePluginValidation \
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO \
-            build 2>&1 | grep -E "error:|BUILD" || true
-          test -d build/dd/Build/Products/Release/Susurro.app
+            build > build.log 2>&1
+          STATUS=$?
+          set -e
+
+          grep -E "error:|warning: .*Sendable|BUILD" build.log || true
+          if [ $STATUS -ne 0 ]; then
+            echo "::error::La compilación falló"
+            tail -60 build.log
+            exit 1
+          fi
+
+          # Y aparte se comprueba el ejecutable, no el directorio. Xcode arma el
+          # bundle y copia los recursos *antes* de enlazar, así que un fallo de
+          # enlazado deja un `.app` que existe y no tiene binario adentro. Es
+          # exactamente lo que se publicó en la v1.0.0.
+          BIN=build/dd/Build/Products/Release/Susurro.app/Contents/MacOS/Susurro
+          if [ ! -x "$BIN" ]; then
+            echo "::error::El bundle quedó sin ejecutable"
+            exit 1
+          fi
 
       - name: Tests
         run: |
@@ -77,6 +111,13 @@ jobs:
           PASSED=$(grep -c 'Test ".*" passed' test.log; true)
           echo "::notice::$PASSED tests pasaron, $FAILED fallaron"
           [ "$FAILED" -eq 0 ]
+          # Exigir que haya corrido *alguno*. Sin esto, un build roto da cero
+          # tests ejecutados, cero fallos, y el paso pasa en verde: ausencia de
+          # fallas se confunde con ausencia de pruebas.
+          if [ "$PASSED" -eq 0 ]; then
+            echo "::error::No corrió ningún test"
+            exit 1
+          fi
 
       - name: Verificar que el catálogo de cadenas esté al día
         run: |

@@ -20,6 +20,17 @@ if [ ! -d "$APP" ]; then
   exit 1
 fi
 
+# Que el bundle exista no quiere decir que sirva. Xcode arma el `.app` y le
+# copia los recursos antes de enlazar, así que un build fallido deja un
+# directorio con ícono, traducciones y todo lo demás, y sin binario. Empaquetar
+# eso produce un .dmg que se monta, se ve bien y no abre. Pasó: la v1.0.0 salió
+# así, firmada y notarizada, con 4 MB de recursos y cero ejecutable.
+NAME="$(basename "$APP" .app)"
+if [ ! -x "$APP/Contents/MacOS/$NAME" ]; then
+  echo "✗ $APP no tiene ejecutable en Contents/MacOS/$NAME" >&2
+  exit 1
+fi
+
 STAGING="$(mktemp -d)"
 trap 'rm -rf "$STAGING"' EXIT
 

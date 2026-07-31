@@ -2,7 +2,7 @@ name: Release
 
 # Publica un .dmg cuando se empuja una etiqueta `vX.Y.Z`.
 #
-# Sobre el costo: este workflow corre en `macos-15`, que es un runner estándar
+# Sobre el costo: este workflow corre en `macos-26`, que es un runner estándar
 # de GitHub. La documentación de GitHub es explícita en que «el uso de los
 # runners estándar alojados por GitHub es gratuito e ilimitado en repositorios
 # públicos», y que lo único que se cobra en público son los *larger runners*
@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 60
 
     steps:
@@ -35,11 +35,23 @@ jobs:
 
       - name: Elegir Xcode
         run: |
-          # `latest-stable` evita quedar clavado a una versión que GitHub
-          # eventualmente retira de la imagen.
-          sudo xcode-select -s /Applications/Xcode.app
+          # Se elige el Xcode más nuevo que haya en la imagen, y después se
+          # comprueba el SDK. `AppleSpeechEngine` usa `SpeechAnalyzer` y
+          # `SpeechTranscriber`, que son de macOS 26: con un SDK anterior el
+          # build falla con "cannot find type ... in scope" recién después de
+          # veinte minutos de compilar MLX. Comprobarlo acá cuesta un segundo y
+          # el mensaje dice qué pasa.
+          NEWEST=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          sudo xcode-select -s "${NEWEST:-/Applications/Xcode.app}"
           xcodebuild -version
           swift --version
+
+          SDK=$(xcrun --sdk macosx --show-sdk-version)
+          echo "::notice::SDK de macOS $SDK en $(xcode-select -p)"
+          if [ "${SDK%%.*}" -lt 26 ]; then
+            echo "::error::Hace falta el SDK de macOS 26 o posterior; hay $SDK"
+            exit 1
+          fi
 
       - name: Instalar XcodeGen
         run: brew install xcodegen
@@ -66,7 +78,14 @@ jobs:
       - name: Compilar
         run: |
           xcodegen generate --quiet
-          set -o pipefail
+
+          # El estado se captura aparte y no se encadena con `grep`. Antes esto
+          # terminaba en `|| true`, que se tragaba el fallo del build, y la
+          # única comprobación era que el directorio `.app` existiera. Xcode
+          # arma el bundle y copia los recursos *antes* de enlazar, así que un
+          # fallo de enlazado deja un `.app` presente y vacío por dentro: la
+          # v1.0.0 se firmó, se notarizó y se publicó sin ejecutable.
+          set +e
           xcodebuild \
             -project Susurro.xcodeproj \
             -scheme Susurro \
@@ -77,8 +96,23 @@ jobs:
             -skipMacroValidation \
             MARKETING_VERSION="${{ steps.version.outputs.version }}" \
             CODE_SIGNING_ALLOWED=NO \
-            build 2>&1 | grep -E "error:|warning: .*Sendable|BUILD" || true
-          test -d build/dd/Build/Products/Release/Susurro.app
+            build > build.log 2>&1
+          STATUS=$?
+          set -e
+
+          grep -E "error:|warning: .*Sendable|BUILD" build.log || true
+          if [ $STATUS -ne 0 ]; then
+            echo "::error::La compilación falló"
+            tail -60 build.log
+            exit 1
+          fi
+
+          BIN=build/dd/Build/Products/Release/Susurro.app/Contents/MacOS/Susurro
+          if [ ! -x "$BIN" ]; then
+            echo "::error::El bundle quedó sin ejecutable"
+            exit 1
+          fi
+          echo "::notice::binario de $(du -h "$BIN" | cut -f1)"
 
       - name: Firmar
         env:
