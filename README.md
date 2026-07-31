@@ -4,6 +4,8 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/macOS-14%2B%20·%20Apple%20Silicon-lightgrey.svg)](#requisitos)
 
+**[actisocial.github.io/susurro](https://actisocial.github.io/susurro/)** — descarga y presentación
+
 Dictado por voz para macOS. Vive en la barra de menús, no tiene ventana
 principal y no manda nada a ningún lado.
 
