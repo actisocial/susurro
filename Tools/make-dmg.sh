@@ -72,7 +72,24 @@ ln -s /Applications "$STAGING/Applications"
 # Developer ID el workflow cae a una firma ad-hoc, y decirle al usuario que la
 # app está verificada cuando Gatekeeper la va a rechazar es peor que no decir
 # nada: lo deja sin saber que el bloqueo es esperable ni cómo seguir.
-if codesign -dv "$APP" 2>&1 | grep -q "Signature=adhoc"; then
+# La salida se captura antes de examinarla, y no se encadena `codesign | grep -q`.
+#
+# Ese encadenamiento parecía correcto y es una carrera. `grep -q` sale apenas
+# encuentra la coincidencia y cierra el pipe; si `codesign` todavía estaba
+# escribiendo, muere con SIGPIPE y termina en 141. Como el script corre con
+# `set -o pipefail`, ese 141 pasa a ser el estado del pipeline entero y el `if`
+# se va por la rama contraria: se detecta "firma válida" en una app ad-hoc y el
+# disco sale con la nota equivocada, que es justo la que le hace falta a quien
+# se topa con el bloqueo de Gatekeeper.
+#
+# Quién gana la carrera depende de cuánto tarde `codesign`. En CI venía ganando
+# `codesign` y el resultado era correcto; en esta máquina gana `grep`. O sea que
+# el dmg publicado estaba bien por suerte, no por construcción.
+SIGNATURE_INFO="$(codesign -dv "$APP" 2>&1 || true)"
+
+# Y la comparación se hace con `[[ ]]`, sin pipe: donde no hay pipe no hay
+# SIGPIPE que pueda envenenar el estado.
+if [[ "$SIGNATURE_INFO" == *"Signature=adhoc"* ]]; then
   echo "→ firma ad-hoc: se incluye la nota de Gatekeeper"
   cat > "$STAGING/LEEME.txt" <<'EOF'
 Susurro — dictado local para macOS
@@ -85,18 +102,35 @@ Instalación
   que cambia en cada arranque, y los permisos de micrófono y accesibilidad
   que le des se pierden al cerrarla.
 
-La primera vez
-  Si macOS dice que la app "no se puede abrir porque no se puede verificar
-  el desarrollador", es porque esta compilación no está firmada con un
-  certificado de pago de Apple. El código es abierto y podés compilarlo vos
-  mismo si preferís no confiar en el binario.
+La primera vez: es probable que no pase NADA
+  Al abrirla, lo más probable es que no veas absolutamente nada. Ni una
+  ventana, ni un error, ni el ícono en la barra de menús. Parece que la app
+  está rota. No lo está.
 
-  Para abrirla igual:
+  Lo que pasa es que esta compilación no está firmada con un certificado de
+  pago de Apple, así que macOS retiene el proceso esperando que vos la
+  autorices. Y como Susurro vive solo en la barra de menús —sin ventanas y
+  sin ícono en el Dock— no tiene por dónde avisarte: el código que dibujaría
+  el aviso es justamente el que macOS no está dejando correr.
+
+  Para autorizarla:
     Ajustes del Sistema › Privacidad y seguridad › desplazate hasta abajo
     › "Abrir de todos modos"
 
-  O desde la terminal:
+  Ese botón aparece recién después de haber intentado abrirla, y caduca
+  aproximadamente en una hora. Si no lo ves, hacé doble clic en la app otra
+  vez y volvé a mirar.
+
+  O, si preferís la terminal, en un solo paso:
     xattr -dr com.apple.quarantine /Applications/Susurro.app
+
+  Puede quedarte un proceso "Susurro" colgado de los intentos anteriores,
+  sin consumir nada. Se cierra con:
+    pkill -f Susurro.app
+
+  El código es abierto: si preferís no lidiar con esto, `make install` lo
+  compila y lo firma con tu propia identidad de desarrollador, y entonces
+  macOS no lo bloquea nunca.
 
 Si los permisos no se recuerdan
   Susurro --permisos    imprime qué ve la app y cómo arreglarlo
