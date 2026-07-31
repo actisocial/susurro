@@ -18,8 +18,8 @@ desconectá el wifi, seguí dictando.
 
 ## Instalar
 
-Bajá el `.dmg` de la [última release](https://github.com/actisocial/susurro/releases/latest)
-y arrastrá Susurro a Aplicaciones.
+Bajá el `.zip` de la [última release](https://github.com/actisocial/susurro/releases/latest),
+descomprimilo y arrastrá Susurro a Aplicaciones.
 
 Las compilaciones automáticas no están notarizadas por Apple, así que la primera
 vez macOS va a decir que no puede verificar al desarrollador. Se abre desde

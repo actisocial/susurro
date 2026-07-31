@@ -1,6 +1,6 @@
 name: Release
 
-# Publica un .dmg cuando se empuja una etiqueta `vX.Y.Z`.
+# Publica un .zip con la app cuando se empuja una etiqueta `vX.Y.Z`.
 #
 # Sobre el costo: este workflow corre en `macos-26`, que es un runner estándar
 # de GitHub. La documentación de GitHub es explícita en que «el uso de los
@@ -159,36 +159,54 @@ jobs:
 
           codesign --verify --strict --verbose=2 "$APP"
 
-      - name: Empaquetar el .dmg
-        run: |
-          chmod +x Tools/make-dmg.sh
-          Tools/make-dmg.sh \
-            build/dd/Build/Products/Release/Susurro.app \
-            "Susurro-${{ steps.version.outputs.version }}.dmg"
-
       - name: Notarizar
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
+          APP=build/dd/Build/Products/Release/Susurro.app
+
           if [ -z "$APPLE_ID" ]; then
             echo "::notice::Sin credenciales de Apple: se omite la notarización."
             exit 0
           fi
 
-          DMG="Susurro-${{ steps.version.outputs.version }}.dmg"
-          xcrun notarytool submit "$DMG" \
+          # Notarizar va antes de empaquetar, y no al revés, porque el ticket se
+          # grapa al `.app` y no se puede grapar a un zip. Para *enviarlo* sí
+          # hace falta un contenedor, así que se arma uno descartable.
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "$RUNNER_TEMP/envio.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/envio.zip" \
             --apple-id "$APPLE_ID" \
             --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_APP_PASSWORD" \
             --wait
 
-          # El grapado incrusta el ticket en el .dmg, así Gatekeeper lo valida
-          # sin consultar a Apple. Es lo que hace que la app abra sin advertencia
-          # incluso sin conexión.
-          xcrun stapler staple "$DMG"
-          xcrun stapler validate "$DMG"
+          # El grapado incrusta el ticket adentro del bundle, así Gatekeeper lo
+          # valida sin consultar a Apple. Es lo que hace que la app abra sin
+          # advertencia incluso sin conexión, y por eso el zip que se publica se
+          # arma después de este paso.
+          xcrun stapler staple "$APP"
+          xcrun stapler validate "$APP"
+
+      - name: Empaquetar el zip
+        run: |
+          APP=build/dd/Build/Products/Release/Susurro.app
+          ZIP="Susurro-${{ steps.version.outputs.version }}.zip"
+
+          # `ditto` y no `zip`: el `zip` de toda la vida no preserva los enlaces
+          # simbólicos ni los atributos extendidos de un bundle de macOS, y eso
+          # invalida la firma de código. La app llega y no abre.
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
+
+          # Comprobación de que lo que se publica sirve: se descomprime en otro
+          # lado y se verifica la firma sobre esa copia, no sobre el original.
+          # Un zip mal armado se ve perfecto hasta que alguien lo abre.
+          ditto -x -k "$ZIP" "$RUNNER_TEMP/verificacion"
+          COPIA="$RUNNER_TEMP/verificacion/Susurro.app"
+          test -x "$COPIA/Contents/MacOS/Susurro"
+          codesign --verify --deep --strict "$COPIA"
+          echo "::notice::$ZIP · $(du -h "$ZIP" | cut -f1) · firma válida tras descomprimir"
 
       - name: Limpiar el llavero
         if: always()
@@ -204,7 +222,7 @@ jobs:
           # Acá solo se necesita saber si existe, no su valor.
           HAS_APPLE_CREDENTIALS: ${{ secrets.APPLE_ID != '' }}
         run: |
-          DMG="Susurro-${{ steps.version.outputs.version }}.dmg"
+          ZIP="Susurro-${{ steps.version.outputs.version }}.zip"
           TAG="${{ steps.version.outputs.tag }}"
 
           if [ "$HAS_APPLE_CREDENTIALS" = "true" ]; then
@@ -224,6 +242,9 @@ jobs:
           - macOS 14 o superior
           - Apple Silicon
 
+          ### Instalación
+          Descomprimí el archivo y arrastrá `Susurro.app` a la carpeta Aplicaciones.
+
           ### Primera ejecución
           Susurro pide micrófono y accesibilidad, y explica para qué sirve cada uno
           antes de pedirlo. Los modelos se descargan cuando los elegís en Ajustes;
@@ -238,7 +259,7 @@ jobs:
             EXTRA="--verify-tag"
           fi
 
-          gh release create "$TAG" "$DMG" \
+          gh release create "$TAG" "$ZIP" \
             --title "Susurro $TAG" \
             --notes-file notes.md \
             $EXTRA
