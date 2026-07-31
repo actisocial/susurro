@@ -28,12 +28,42 @@ enum FillerStripper {
         "um", "umm", "uh", "uhh", "er", "err", "hmm", "hm",
     ]
 
-    /// Locuciones de relleno. Van como frase completa porque los componentes
-    /// sueltos sí significan cosas: «o sea» es muletilla, pero «sea» solo es un
-    /// verbo perfectamente válido.
+    /// Locuciones de relleno, **de la más larga a la más corta**.
+    ///
+    /// El orden no es cosmético: es la corrección de un bug que rompía las
+    /// oraciones. Al borrar solo «o sea» de «o sea que hay que restaurar», el
+    /// «que» quedaba huérfano —«se cayó noche que hay que restaurar»— y eso es
+    /// español malformado. Peor: ese texto roto es el que después recibía el
+    /// LLM, y partir la oración ahí es una reacción razonable a algo que ya
+    /// venía mal. O sea que la mitad de los cortes de oración absurdos que le
+    /// achacaba al modelo los estaba causando este limpiador.
+    ///
+    /// Estas locuciones se borran enteras. Los componentes sueltos no se tocan,
+    /// porque «sea» solo es un verbo válido y «que» es una conjunción.
+    /// Estas nunca significan nada, ni siquiera abriendo la oración.
     private static let phrases: [String] = [
-        "o sea", "osea", "es decir o sea",
-        "you know", "i mean", "sort of", "kind of",
+        // Primero las que arrastran un «que» subordinante, para no dejarlo solo.
+        "o sea que", "osea que", "es decir que",
+        "o sea", "osea", "es decir",
+        "you know what i mean", "you know", "i mean", "sort of", "kind of",
+    ]
+
+    /// Estas sí tienen una lectura literal cuando **abren** la oración.
+    ///
+    /// «Digamos que sí, aceptamos la propuesta» arranca con un «digamos que»
+    /// que significa «supongamos» y es parte de lo que la persona quiso decir.
+    /// En medio de la frase —«el deploy, digamos que, quedó listo»— es relleno.
+    /// La distinción es solo posicional, así que se puede resolver sin entender
+    /// nada.
+    private static let phrasesNonInitial: [String] = [
+        "digamos que", "quiero decir que", "vamos que", "quiero decir",
+    ]
+
+    /// Locuciones que cierran la oración y no significan nada: «…el backup nada
+    /// eso», «…y listo nada». Solo se borran al final, porque en medio de la
+    /// frase «nada» y «eso» son palabras con significado.
+    private static let trailingPhrases: [String] = [
+        "nada eso", "eso nada", "y nada", "nada más eso", "y eso nada",
     ]
 
     /// Muletillas que solo lo son al final de la oración. «Viste» y «nada»
@@ -48,15 +78,25 @@ enum FillerStripper {
 
         var result = text
 
-        // 1. Locuciones primero: si se borraran las palabras sueltas antes, «o
-        //    sea» quedaría convertido en «sea» y ya no se reconocería.
+        // 1. Cierres de oración primero: «nada eso» tiene que reconocerse antes
+        //    de que se toque nada de lo que lo rodea.
+        result = removeTrailingPhrases(from: result)
+
+        // 2. Locuciones, de la más larga a la más corta. Si se borraran las
+        //    palabras sueltas antes, «o sea» quedaría convertido en «sea» y ya
+        //    no se reconocería; y si se borrara «o sea» antes que «o sea que»,
+        //    quedaría un «que» huérfano.
         for phrase in phrases {
-            result = removeOccurrences(of: phrase, in: result)
+            result = removeOccurrences(of: phrase, in: result, sentenceInitial: true)
+        }
+        for phrase in phrasesNonInitial {
+            result = removeOccurrences(of: phrase, in: result, sentenceInitial: false)
         }
 
-        // 2. Interjecciones sueltas.
+        // 3. Interjecciones sueltas. Estas sí se borran en cualquier posición:
+        //    «eh» al principio de una oración sigue sin significar nada.
         for word in interjections {
-            result = removeOccurrences(of: word, in: result)
+            result = removeOccurrences(of: word, in: result, sentenceInitial: true)
         }
 
         // 3. Tics de cierre, solo pegados al final de una oración.
@@ -69,16 +109,42 @@ enum FillerStripper {
 
     /// Borra las apariciones de `needle` respetando límites de palabra y sin
     /// distinguir mayúsculas ni tildes.
-    private static func removeOccurrences(of needle: String, in text: String) -> String {
+    ///
+    /// - Parameter sentenceInitial: si se permite borrar cuando la locución abre
+    ///   la oración. Para las interjecciones sí; para las locuciones no, porque
+    ///   «Digamos que sí, aceptamos» abre con un «digamos que» literal que
+    ///   significa «supongamos», no una muletilla.
+    private static func removeOccurrences(
+        of needle: String, in text: String, sentenceInitial: Bool
+    ) -> String {
         let escaped = NSRegularExpression.escapedPattern(for: needle)
         // `\b` no alcanza con acentos, así que el límite se expresa como
         // "principio de texto o algo que no sea letra".
-        let pattern = "(?<![\\p{L}\\p{N}])\(escaped)(?![\\p{L}\\p{N}])"
+        let boundary = sentenceInitial
+            ? "(?<![\\p{L}\\p{N}])"
+            // Exige que haya contenido antes: una letra, un dígito o una coma.
+            : "(?<=[\\p{L}\\p{N},])\\s"
+        let pattern = "\(boundary)\(escaped)(?![\\p{L}\\p{N}])"
         guard let regex = try? NSRegularExpression(
             pattern: pattern, options: [.caseInsensitive]) else { return text }
 
         let range = NSRange(text.startIndex..., in: text)
         return regex.stringByReplacingMatches(in: text, range: range, withTemplate: " ")
+    }
+
+    /// Saca las locuciones que cierran la oración: «…restaurar el backup nada
+    /// eso.» → «…restaurar el backup.»
+    private static func removeTrailingPhrases(from text: String) -> String {
+        var result = text
+        for phrase in trailingPhrases {
+            let escaped = NSRegularExpression.escapedPattern(for: phrase)
+            let pattern = "[,\\s]+\(escaped)\\s*(?=[.!?…]|$)"
+            guard let regex = try? NSRegularExpression(
+                pattern: pattern, options: [.caseInsensitive]) else { continue }
+            let range = NSRange(result.startIndex..., in: result)
+            result = regex.stringByReplacingMatches(in: result, range: range, withTemplate: "")
+        }
+        return result
     }
 
     /// Saca los tics que cierran una oración: «…que lo revise Juan, viste.» →

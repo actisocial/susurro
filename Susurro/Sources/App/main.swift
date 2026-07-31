@@ -11,6 +11,12 @@ if SelfTest.shouldRun() {
     exit(status)
 }
 
+// Banco de pruebas: mide la calidad de la limpieza sobre un corpus fijo.
+if Benchmark.shouldRun() {
+    let status = await Benchmark.run()
+    exit(status)
+}
+
 let application = NSApplication.shared
 let delegate = AppDelegate()
 application.delegate = delegate
