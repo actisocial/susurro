@@ -274,6 +274,24 @@ final class StatusItemController: NSObject {
                 for: refinement, model: preferences.refinementModel.displayName))
         }
 
+        // Los permisos se avisan acá y no solo en Ajustes.
+        //
+        // Susurro no tiene ventana ni ícono en el Dock: si el permiso está mal,
+        // la única pista es que apretás la tecla y no pasa nada. Descubrirlo
+        // exige abrir Ajustes a propósito, sospechando de antemano cuál es el
+        // problema. La barra de menús es el único lugar que siempre está a la
+        // vista, así que el aviso va acá.
+        switch controller.permissions.accessibility {
+        case .stale:
+            items.append(String(localized: "⚠︎ El permiso de Accesibilidad quedó viejo"))
+            items.append(String(localized: "    Abrí Ajustes y tocá «Reparar»"))
+        case .denied, .notDetermined:
+            items.append(String(localized: "⚠︎ Falta el permiso de Accesibilidad"))
+            items.append(String(localized: "    El texto va al portapapeles"))
+        case .granted:
+            break
+        }
+
         if let notice = controller.lastNotice, case .idle = controller.state {
             items.append(notice)
         }

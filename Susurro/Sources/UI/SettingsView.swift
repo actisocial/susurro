@@ -142,7 +142,8 @@ private struct GeneralSettings: View {
                 PermissionRow(
                     title: "Accesibilidad",
                     state: controller.permissions.accessibility,
-                    pane: .accessibility)
+                    pane: .accessibility,
+                    repair: { Task { await controller.permissions.repairAccessibility() } })
                 Text("Accesibilidad hace falta para dos cosas: escuchar la tecla aunque estés en otra app, y pegar el texto donde tenés el cursor. Sin ese permiso Susurro transcribe igual, pero deja el texto en el portapapeles.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -230,20 +231,74 @@ private struct PermissionRow: View {
     let title: LocalizedStringKey
     let state: Permissions.State
     let pane: Permissions.Pane
+    /// Solo se pasa para Accesibilidad, que es el único que se puede reparar.
+    var repair: (() -> Void)?
+
+    @State private var repairing = false
 
     var body: some View {
-        HStack {
-            Label {
-                Text(title)
-            } icon: {
-                Image(systemName: state.isGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                    .foregroundStyle(state.isGranted ? .green : .orange)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Label {
+                    Text(title)
+                } icon: {
+                    Image(systemName: state.isGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundStyle(state.isGranted ? .green : .orange)
+                }
+                Spacer()
+
+                if state == .stale, let repair {
+                    repairButton(repair)
+                        .buttonStyle(.borderedProminent)
+                } else if !state.isGranted {
+                    Button("Abrir Ajustes") { Permissions.openSystemSettings(pane) }
+                }
             }
-            Spacer()
-            if !state.isGranted {
-                Button("Abrir Ajustes") { Permissions.openSystemSettings(pane) }
+
+            // El caso confuso se explica, en vez de mostrar el mismo triángulo
+            // naranja que cuando el permiso nunca se dio. Son situaciones
+            // opuestas: en una falta darlo, en la otra ya está dado y aun así no
+            // sirve, y desde Ajustes del Sistema se ven idénticas.
+            if state == .stale {
+                Text("Susurro aparece encendido en Ajustes del Sistema, pero ese permiso quedó atado a una versión anterior de la app y macOS ya no lo reconoce. Apagar y prender el interruptor no alcanza. «Reparar» borra la entrada vieja y vuelve a pedirlo.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // La reparación también se ofrece cuando el permiso figura como
+            // denegado a secas.
+            //
+            // Detectar la entrada vieja requiere haber visto el permiso
+            // concedido antes, con este binario; para quien viene de una versión
+            // que todavía no anotaba eso, el estado se ve como un `denied`
+            // común. O sea que justo la gente que ya está atascada es la que no
+            // recibiría el diagnóstico. Ofrecer la salida acá también cubre ese
+            // hueco, y no cuesta nada: reparar cuando el permiso simplemente
+            // falta es inofensivo — borra una entrada que no existe y lo pide.
+            if state == .denied, let repair {
+                HStack(spacing: 4) {
+                    Text("¿Ya figura encendido en Ajustes y aun así no anda?")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    repairButton(repair)
+                        .buttonStyle(.link)
+                        .font(.caption)
+                }
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    private func repairButton(_ repair: @escaping () -> Void) -> some View {
+        Button(repairing ? "Reparando…" : "Reparar") {
+            repairing = true
+            repair()
+            // El estado real lo confirma el sondeo de permisos; esto solo
+            // devuelve el botón a su forma normal.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { repairing = false }
+        }
+        .disabled(repairing)
     }
 }
 

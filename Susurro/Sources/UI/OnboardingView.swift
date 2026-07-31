@@ -100,13 +100,32 @@ struct OnboardingView: View {
             granted: controller.permissions.accessibility.isGranted,
             grantedLabel: "Accesibilidad habilitada"
         ) {
-            if !controller.permissions.accessibility.isGranted {
+            // Dos causas distintas para el mismo síntoma —«lo activé y sigue en
+            // rojo»— con soluciones que no se parecen en nada. Antes las dos
+            // recibían el mismo consejo de reiniciar, que para la entrada vieja
+            // no sirve: podés reiniciar cien veces y sigue igual.
+            switch controller.permissions.accessibility {
+            case .stale:
+                Text("Susurro figura encendido en Ajustes del Sistema, pero ese permiso se lo diste a una versión anterior de la app y macOS ya no lo reconoce. Reiniciar no alcanza, y apagar y prender el interruptor tampoco.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Reparar el permiso") {
+                    Task { await controller.permissions.repairAccessibility() }
+                }
+                .buttonStyle(.borderedProminent)
+
+            case .denied, .notDetermined:
                 Text("Si ya lo activaste y sigue en rojo, hay que reiniciar Susurro para que macOS lo tome.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                 Button("Reiniciar Susurro") { Permissions.relaunch() }
                     .controlSize(.small)
+
+            case .granted:
+                EmptyView()
             }
         }
     }
@@ -226,9 +245,15 @@ struct OnboardingView: View {
             }
 
         case 2:
-            if controller.permissions.accessibility.isGranted {
+            switch controller.permissions.accessibility {
+            case .granted:
                 Button("Continuar") { step = 3 }.keyboardShortcut(.defaultAction)
-            } else {
+            case .stale:
+                // Mandar a Ajustes del Sistema acá sería mandarla a un lugar
+                // donde el interruptor ya está encendido y no hay nada que
+                // tocar. El botón de reparar está en el cuerpo del paso.
+                Button("Continuar igual") { step = 3 }
+            case .denied, .notDetermined:
                 Button("Abrir Ajustes del Sistema") {
                     controller.permissions.requestAccessibility()
                     Permissions.openSystemSettings(.accessibility)

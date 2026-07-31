@@ -4,6 +4,7 @@ import ApplicationServices
 import Foundation
 import OSLog
 import Observation
+import Security
 
 /// Estado de los permisos que Susurro necesita, y cómo pedirlos.
 ///
@@ -30,6 +31,20 @@ final class Permissions {
         case granted
         case denied
         case notDetermined
+        /// Se concedió, pero la entrada quedó atada a un binario anterior.
+        ///
+        /// Es el caso más confuso de todos y merece existir aparte: Ajustes del
+        /// Sistema muestra a Susurro en la lista **con el interruptor
+        /// encendido**, y la app ve `false`. Cualquiera concluye que la app está
+        /// rota, porque desde afuera el permiso está dado.
+        ///
+        /// Pasa porque macOS ata la entrada a la identidad de código, no al
+        /// nombre ni a la ruta. Cambiar de una compilación propia a una
+        /// descargada, o al revés, cambia esa identidad y la entrada deja de
+        /// corresponder. Apagar y prender el interruptor no alcanza: hay que
+        /// **quitar la fila con el botón «−» y volver a agregarla**, que no es
+        /// algo que nadie adivine.
+        case stale
 
         var isGranted: Bool { self == .granted }
     }
@@ -57,7 +72,16 @@ final class Permissions {
 
     func refresh() {
         microphone = Self.microphoneState()
-        accessibility = AXIsProcessTrusted() ? .granted : .denied
+
+        if AXIsProcessTrusted() {
+            accessibility = .granted
+            // Se anota con qué identidad de código quedó concedido. Es la única
+            // forma de distinguir después «nunca lo dio» de «lo dio y se
+            // invalidó», que necesitan instrucciones opuestas.
+            Self.rememberGrantedIdentity()
+        } else {
+            accessibility = Self.wasGrantedForAnotherBinary() ? .stale : .denied
+        }
 
         // Se registra en el log del sistema porque «le di el permiso y no lo
         // detecta» es imposible de diagnosticar de otro modo: Ajustes del
@@ -70,6 +94,56 @@ final class Permissions {
             lastLogged = snapshot
             logger.info("permisos: \(snapshot, privacy: .public)")
         }
+    }
+
+    // MARK: - Identidad de código
+
+    /// Clave donde se recuerda con qué binario se concedió Accesibilidad.
+    ///
+    /// Va directo a `UserDefaults` y no a `Preferences` porque no es una
+    /// preferencia: nadie la elige ni la ve. Es una miga de pan para poder
+    /// diagnosticar después.
+    private static let grantedIdentityKey = "accessibilityGrantedForCodeIdentity"
+
+    /// Huella de la identidad de código de este proceso.
+    ///
+    /// Es el `cdhash`, que es exactamente lo que macOS usa para decidir si una
+    /// entrada de TCC corresponde al binario que está pidiendo. Cambia con cada
+    /// recompilación y con cada cambio de firma, que es precisamente lo que hace
+    /// falta detectar.
+    private static func codeIdentity() -> String? {
+        var code: SecCode?
+        guard SecCodeCopySelf(SecCSFlags(), &code) == errSecSuccess, let code else { return nil }
+
+        var staticCode: SecStaticCode?
+        guard SecCodeCopyStaticCode(code, SecCSFlags(), &staticCode) == errSecSuccess,
+              let staticCode
+        else { return nil }
+
+        var information: CFDictionary?
+        let flags = SecCSFlags(rawValue: kSecCSSigningInformation)
+        guard SecCodeCopySigningInformation(staticCode, flags, &information) == errSecSuccess,
+              let dictionary = information as? [String: Any],
+              let unique = dictionary[kSecCodeInfoUnique as String] as? Data
+        else { return nil }
+
+        return unique.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func rememberGrantedIdentity() {
+        guard let identity = codeIdentity() else { return }
+        UserDefaults.standard.set(identity, forKey: grantedIdentityKey)
+    }
+
+    /// Si alguna vez se concedió, pero con un binario distinto del actual.
+    private static func wasGrantedForAnotherBinary() -> Bool {
+        guard let remembered = UserDefaults.standard.string(forKey: grantedIdentityKey) else {
+            return false
+        }
+        // Sin poder leer la identidad actual no se puede afirmar nada. Ante la
+        // duda se prefiere el mensaje genérico antes que uno específico y falso.
+        guard let current = codeIdentity() else { return false }
+        return remembered != current
     }
 
     private static func microphoneState() -> State {
@@ -113,6 +187,50 @@ final class Permissions {
         // estable y está documentado.
         let options = ["AXTrustedCheckOptionPrompt": prompt] as CFDictionary
         accessibility = AXIsProcessTrustedWithOptions(options) ? .granted : .denied
+    }
+
+    /// Borra la entrada vieja de Accesibilidad y vuelve a pedir el permiso.
+    ///
+    /// Esto existe porque la salida manual es adivinanza pura. Cuando la entrada
+    /// quedó atada a un binario anterior, Ajustes del Sistema muestra a Susurro
+    /// en la lista con el interruptor encendido y la app igual no puede escribir.
+    /// Apagar y prender el interruptor **no** arregla nada: hay que seleccionar
+    /// la fila, tocar «−», y volver a agregar la app. Nadie deduce eso, y menos
+    /// cuando desde afuera el permiso se ve concedido.
+    ///
+    /// `tccutil reset` hace exactamente eso mismo desde adentro. No necesita
+    /// privilegios de administrador mientras se limite al bundle propio, que es
+    /// el caso — el identificador se toma del bundle y no se acepta de ningún
+    /// lado más, así que no hay forma de que esto toque los permisos de otra app.
+    ///
+    /// Después del borrado el permiso queda sin decidir, y ahí `AXIsProcess-
+    /// TrustedWithOptions` vuelve a mostrar el diálogo del sistema en vez de
+    /// fallar en silencio, que es lo que hacía mientras la entrada vieja existía.
+    func repairAccessibility() async {
+        guard let bundleID = Bundle.main.bundleIdentifier else { return }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+        process.arguments = ["reset", "Accessibility", bundleID]
+        // La salida se descarta pero se captura igual: sin esto hereda la
+        // consola del proceso y ensucia el log del sistema.
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+            await withCheckedContinuation { continuation in
+                process.terminationHandler = { _ in continuation.resume() }
+            }
+        } catch {
+            logger.error("no se pudo reparar el permiso: \(error.localizedDescription, privacy: .public)")
+            // Si `tccutil` no está o falla, queda el camino manual.
+            Self.openSystemSettings(.accessibility)
+            return
+        }
+
+        UserDefaults.standard.removeObject(forKey: Self.grantedIdentityKey)
+        requestAccessibility(prompt: true)
     }
 
     // MARK: - Enlaces a Ajustes del Sistema

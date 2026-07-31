@@ -36,6 +36,7 @@ enum SelfTest {
             case .granted:        return "✓ concedido"
             case .denied:         return "✗ denegado"
             case .notDetermined:  return "· sin decidir"
+            case .stale:          return "⚠ concedido a una versión anterior"
             }
         }
 
@@ -44,13 +45,23 @@ enum SelfTest {
         print("micrófono:     \(mark(permissions.microphone))")
         print("accesibilidad: \(mark(permissions.accessibility))")
 
-        if !permissions.accessibility.isGranted {
+        switch permissions.accessibility {
+        case .stale:
             print("")
-            print("Si en Ajustes del Sistema aparece encendido pero acá dice denegado,")
-            print("es que el binario cambió después de que se concedió el permiso.")
-            print("macOS lo invalida en silencio cuando eso pasa. Solución:")
-            print("  1. Sacá Susurro de la lista de Accesibilidad (botón −)")
-            print("  2. Volvé a agregarlo, o dejá que la app lo pida de nuevo")
+            print("En Ajustes del Sistema vas a ver a Susurro encendido, y aun así")
+            print("la app no puede escribir: esa entrada quedó atada al binario")
+            print("anterior y macOS ya no la reconoce. Apagar y prender el")
+            print("interruptor no alcanza.")
+            print("")
+            print("Se arregla con el botón «Reparar» en Ajustes de Susurro, o acá:")
+            print("  tccutil reset Accessibility \(Bundle.main.bundleIdentifier ?? "com.acti.susurro")")
+            print("y después abrí Susurro y concedé el permiso de nuevo.")
+        case .denied, .notDetermined:
+            print("")
+            print("Concedelo en Ajustes del Sistema › Privacidad y seguridad ›")
+            print("Accesibilidad, o desde Ajustes de Susurro.")
+        case .granted:
+            break
         }
 
         return permissions.accessibility.isGranted ? 0 : 1
