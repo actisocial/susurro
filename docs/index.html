@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Susurro — dictado por voz local para macOS</title>
+<meta name="description" content="Dictado por voz para macOS que corre entero en tu Mac. Mantené una tecla, hablá, soltá. Sin servidor, sin cuenta y sin historial.">
+<link rel="icon" href="susurro.png">
+
+<meta property="og:title" content="Susurro — dictado por voz local para macOS">
+<meta property="og:description" content="Mantené una tecla, hablá, soltá. El texto aparece donde tenías el cursor. Todo pasa en tu Mac.">
+<meta property="og:image" content="https://actisocial.github.io/susurro/susurro.png">
+<meta property="og:type" content="website">
+
+<style>
+:root {
+  --violeta: #6c5ce7;
+  --violeta-claro: #8b7cf0;
+  --fondo: #ffffff;
+  --fondo-suave: #f6f6f8;
+  --borde: #e3e3e9;
+  --texto: #16161a;
+  --texto-suave: #5c5c66;
+  --aviso-fondo: #fff8e6;
+  --aviso-borde: #f0d69a;
+  --aviso-texto: #6b4e00;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #0e0e11;
+    --fondo-suave: #17171c;
+    --borde: #2a2a33;
+    --texto: #f2f2f5;
+    --texto-suave: #a0a0ad;
+    --aviso-fondo: #2a2313;
+    --aviso-borde: #4d4020;
+    --aviso-texto: #e8c97a;
+  }
+}
+:root[data-theme="light"] {
+  --fondo: #ffffff; --fondo-suave: #f6f6f8; --borde: #e3e3e9;
+  --texto: #16161a; --texto-suave: #5c5c66;
+  --aviso-fondo: #fff8e6; --aviso-borde: #f0d69a; --aviso-texto: #6b4e00;
+}
+:root[data-theme="dark"] {
+  --fondo: #0e0e11; --fondo-suave: #17171c; --borde: #2a2a33;
+  --texto: #f2f2f5; --texto-suave: #a0a0ad;
+  --aviso-fondo: #2a2313; --aviso-borde: #4d4020; --aviso-texto: #e8c97a;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  overflow-x: hidden;
+}
+.envoltorio { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+a { color: var(--violeta); }
+@media (prefers-color-scheme: dark) { a { color: var(--violeta-claro); } }
+:root[data-theme="dark"] a { color: var(--violeta-claro); }
+
+/* --- Portada --- */
+.portada { text-align: center; padding: 72px 0 56px; }
+.portada img { width: 112px; height: 112px; border-radius: 24px; }
+.portada h1 {
+  font-size: clamp(2.2rem, 7vw, 3rem);
+  margin: 20px 0 6px;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+.lema { font-size: 1.15rem; color: var(--texto-suave); margin: 0 auto 8px; max-width: 34ch; }
+.gesto {
+  font-size: 1.05rem; margin: 22px auto 0; max-width: 40ch;
+}
+.gesto b { font-weight: 600; }
+
+/* --- Descarga --- */
+.descarga { margin: 34px 0 10px; }
+.boton {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: linear-gradient(180deg, var(--violeta-claro), var(--violeta));
+  color: #fff; text-decoration: none;
+  padding: 15px 30px; border-radius: 13px;
+  font-size: 1.06rem; font-weight: 600;
+  box-shadow: 0 6px 20px rgba(108, 92, 231, 0.32);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.boton:hover { transform: translateY(-1px); box-shadow: 0 9px 26px rgba(108, 92, 231, 0.4); }
+.boton:active { transform: translateY(0); }
+.boton svg { width: 19px; height: 19px; fill: currentColor; flex: none; }
+.bajo-boton { font-size: .88rem; color: var(--texto-suave); margin-top: 12px; }
+.bajo-boton a { color: var(--texto-suave); }
+
+/* --- Secciones --- */
+section { padding: 40px 0; border-top: 1px solid var(--borde); }
+h2 { font-size: 1.35rem; margin: 0 0 8px; letter-spacing: -0.01em; }
+h3 { font-size: 1rem; margin: 0 0 4px; }
+p { margin: 0 0 14px; }
+p:last-child { margin-bottom: 0; }
+.suave { color: var(--texto-suave); }
+
+.pasos { display: grid; gap: 18px; margin-top: 22px; }
+@media (min-width: 620px) { .pasos { grid-template-columns: repeat(3, 1fr); } }
+.paso { background: var(--fondo-suave); border: 1px solid var(--borde); border-radius: 12px; padding: 18px; }
+.paso .n {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 7px;
+  background: var(--violeta); color: #fff;
+  font-size: .8rem; font-weight: 700; margin-bottom: 10px;
+}
+.paso p { font-size: .93rem; color: var(--texto-suave); margin: 0; }
+
+.lista { list-style: none; padding: 0; margin: 18px 0 0; }
+.lista li { padding: 12px 0; border-bottom: 1px solid var(--borde); }
+.lista li:last-child { border-bottom: none; }
+.lista .titulo { font-weight: 600; }
+.lista .detalle { color: var(--texto-suave); font-size: .93rem; }
+
+.aviso {
+  background: var(--aviso-fondo);
+  border: 1px solid var(--aviso-borde);
+  color: var(--aviso-texto);
+  border-radius: 12px; padding: 18px 20px; margin-top: 20px;
+}
+.aviso h3 { margin-top: 0; color: inherit; }
+.aviso p { font-size: .94rem; }
+.aviso code, code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: .87em;
+  background: rgba(127,127,127,.16);
+  padding: 2px 6px; border-radius: 5px;
+}
+.aviso ol { margin: 10px 0 0; padding-left: 20px; font-size: .94rem; }
+.aviso li { margin-bottom: 6px; }
+
+table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: .94rem; }
+.tabla-scroll { overflow-x: auto; }
+th, td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--borde); }
+th { font-weight: 600; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; color: var(--texto-suave); }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+footer {
+  border-top: 1px solid var(--borde);
+  padding: 30px 0 50px; text-align: center;
+  color: var(--texto-suave); font-size: .88rem;
+}
+footer a { color: var(--texto-suave); }
+</style>
+</head>
+<body>
+
+<div class="envoltorio">
+
+  <header class="portada">
+    <img src="susurro.png" alt="Ícono de Susurro">
+    <h1>Susurro</h1>
+    <p class="lema">Dictado por voz para macOS que no manda tu voz a ningún lado.</p>
+    <p class="gesto"><b>Mantené una tecla, hablá, soltá.</b> El texto aparece donde tenías el cursor.</p>
+
+    <div class="descarga">
+      <a class="boton" id="descargar" href="https://github.com/actisocial/susurro/releases/latest">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a.75.75 0 0 1 .75.75v7.19l2.47-2.47a.75.75 0 1 1 1.06 1.06l-3.75 3.75a.75.75 0 0 1-1.06 0L3.72 7.53a.75.75 0 0 1 1.06-1.06l2.47 2.47V1.75A.75.75 0 0 1 8 1Z"/><path d="M2 12.25a.75.75 0 0 1 1.5 0v1.25h9v-1.25a.75.75 0 0 1 1.5 0v1.5A.75.75 0 0 1 13.25 15h-10.5A.75.75 0 0 1 2 13.75Z"/></svg>
+        <span id="etiqueta-descarga">Descargar para Mac</span>
+      </a>
+      <p class="bajo-boton" id="detalle-descarga">
+        macOS 14 o superior · Apple Silicon ·
+        <a href="https://github.com/actisocial/susurro">código en GitHub</a>
+      </p>
+    </div>
+  </header>
+
+  <section>
+    <h2>Cómo se usa</h2>
+    <div class="pasos">
+      <div class="paso">
+        <div class="n">1</div>
+        <h3>Mantené la tecla</h3>
+        <p>Elegís cuál en Ajustes. Funciona aunque estés escribiendo en otra app.</p>
+      </div>
+      <div class="paso">
+        <div class="n">2</div>
+        <h3>Hablá</h3>
+        <p>Dos toques rápidos dejan el dictado enganchado para las manos libres. Esc cancela.</p>
+      </div>
+      <div class="paso">
+        <div class="n">3</div>
+        <h3>Soltá</h3>
+        <p>El texto se pega donde tenías el cursor, puntuado y sin los «eh» ni los «o sea».</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Todo pasa en tu Mac</h2>
+    <p class="suave">El audio no sale del dispositivo. No hay servidor, no hay cuenta y no se guarda ningún historial de lo que dictaste. La única vez que Susurro usa la red es para bajar un modelo, y siempre porque se lo pediste.</p>
+    <p class="suave">Se puede comprobar sin creerle a nadie: bajá el modelo, desconectá el wifi y seguí dictando.</p>
+  </section>
+
+  <section>
+    <h2>Nunca inventa palabras que no dijiste</h2>
+    <p class="suave">Después de transcribir, un modelo de lenguaje puntúa el texto y saca las muletillas. Pero no se le deja escribir: su salida se trata como un voto, y el texto final se reconstruye alineándolo contra lo que realmente dictaste.</p>
+    <p class="suave">En la práctica eso significa que el modelo puede <b>borrar</b> y <b>puntuar</b>, y nada más. Si devuelve algo que no se parece a lo que dijiste, o si tarda demasiado, Susurro descarta el refinado y pega la transcripción cruda. Nunca vas a recibir la respuesta de un modelo en vez de tu texto.</p>
+  </section>
+
+  <section>
+    <h2>Qué modelos usa</h2>
+    <div class="tabla-scroll">
+      <table>
+        <thead>
+          <tr><th>Para qué</th><th>Modelo</th><th class="num">Descarga</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Entender lo que decís</td><td>Parakeet TDT v3<br><span class="detalle suave">25 idiomas, corre en el Neural Engine</span></td><td class="num">483 MB</td></tr>
+          <tr><td>Puntuar y limpiar</td><td>Qwen3.5 2B<br><span class="detalle suave">corre en la GPU, con MLX</span></td><td class="num">2,7 GB</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="suave" style="margin-top:16px">Se descargan la primera vez y podés cambiarlos: hay cinco opciones de reconocimiento y cinco de limpieza, cada una con sus números medidos a la vista para que la elección no dependa del nombre. También podés usar el motor de dictado que ya trae macOS y no descargar nada.</p>
+  </section>
+
+  <section>
+    <h2>Antes de instalar</h2>
+    <p class="suave">Dos cosas que conviene saber, porque las dos se ven como si la app estuviera rota y no lo está.</p>
+
+    <div class="aviso">
+      <h3>La primera vez, probablemente no pase nada</h3>
+      <p>Estas compilaciones no están notarizadas por Apple. Al abrir la app puede que no veas absolutamente nada: ni ventana, ni error, ni el ícono en la barra de menús.</p>
+      <p>macOS retiene el proceso esperando tu autorización, y como Susurro vive solo en la barra de menús no tiene por dónde avisarte: el código que mostraría el aviso es el que macOS no deja correr.</p>
+      <ol>
+        <li>Abrí <b>Ajustes del Sistema › Privacidad y seguridad</b></li>
+        <li>Bajá hasta el final y tocá <b>«Abrir de todos modos»</b></li>
+      </ol>
+      <p style="margin-top:12px">Ese botón aparece recién después de haber intentado abrirla. En un paso desde la terminal: <code>xattr -dr com.apple.quarantine /Applications/Susurro.app</code></p>
+    </div>
+
+    <div class="aviso">
+      <h3>Al actualizar hay que reparar un permiso</h3>
+      <p>macOS ata el permiso de Accesibilidad a la firma del binario. Como estas compilaciones se firman sin certificado de Apple, cada versión nueva invalida el permiso anterior: vas a ver Susurro <b>encendido</b> en Ajustes del Sistema y la app igual no va a poder pegar texto.</p>
+      <p>Apagar y prender el interruptor no sirve. Susurro lo detecta y te ofrece un botón <b>«Reparar»</b> en sus Ajustes, que lo resuelve en un clic.</p>
+    </div>
+
+    <p class="suave" style="margin-top:20px">Las dos cosas desaparecen si compilás la app vos mismo: <code>make install</code> la firma con tu propia identidad de desarrollador. El código es abierto y podés auditarlo — es una app que escucha el micrófono, así que desconfiar es razonable.</p>
+  </section>
+
+  <section>
+    <h2>Requisitos</h2>
+    <ul class="lista">
+      <li><span class="titulo">macOS 14 o superior</span> <span class="detalle">— el motor de dictado del sistema necesita macOS 26</span></li>
+      <li><span class="titulo">Apple Silicon</span> <span class="detalle">— los modelos corren en el Neural Engine y en la GPU</span></li>
+      <li><span class="titulo">Unos 3 GB de disco</span> <span class="detalle">— para los dos modelos recomendados</span></li>
+    </ul>
+  </section>
+
+  <footer>
+    <p><a href="https://github.com/actisocial/susurro">github.com/actisocial/susurro</a> · Apache-2.0</p>
+    <p>Modelos de NVIDIA, Alibaba Cloud, Google y OpenAI, cada uno con su licencia.</p>
+  </footer>
+
+</div>
+
+<script>
+// El botón apunta al `.dmg` de la última release, con su versión y su peso.
+//
+// El nombre del archivo lleva la versión adentro (`Susurro-1.0.4.dmg`), así que
+// no hay una URL fija que sirva para siempre: hay que preguntar cuál es la
+// última. Si la consulta falla —sin red, o por el límite de peticiones sin
+// autenticar— el enlace ya apunta a la página de releases, que siempre funciona.
+// Por eso el `href` viene puesto en el HTML y esto solo lo mejora.
+(async () => {
+  const boton = document.getElementById('descargar');
+  const etiqueta = document.getElementById('etiqueta-descarga');
+  const detalle = document.getElementById('detalle-descarga');
+  try {
+    const respuesta = await fetch('https://api.github.com/repos/actisocial/susurro/releases/latest');
+    if (!respuesta.ok) return;
+    const release = await respuesta.json();
+    const dmg = (release.assets || []).find(a => a.name.endsWith('.dmg'));
+    if (!dmg) return;
+
+    boton.href = dmg.browser_download_url;
+    etiqueta.textContent = 'Descargar para Mac';
+    const megas = (dmg.size / 1e6).toFixed(0);
+    detalle.innerHTML =
+      `${release.tag_name} · ${megas} MB · macOS 14+ · Apple Silicon<br>` +
+      `<a href="https://github.com/actisocial/susurro/releases/latest">notas de la versión</a> · ` +
+      `<a href="https://github.com/actisocial/susurro">código en GitHub</a>`;
+  } catch (_) {
+    // Se deja el enlace a la página de releases que ya estaba en el HTML.
+  }
+})();
+</script>
+
+</body>
+</html>
