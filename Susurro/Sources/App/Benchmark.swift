@@ -113,15 +113,24 @@ enum Benchmark {
         let skipRefinement = CommandLine.arguments.contains("--sin-refinado")
         let preferences = Preferences.shared
 
+        // Permite comparar modelos sin recompilar ni tocar los ajustes reales.
+        let model: RefinementModel = {
+            guard let index = CommandLine.arguments.firstIndex(of: "--modelo-refinado"),
+                  CommandLine.arguments.indices.contains(index + 1),
+                  let requested = RefinementCatalog.model(id: CommandLine.arguments[index + 1])
+            else { return preferences.refinementModel }
+            return requested
+        }()
+
         print("corpus: \(corpus.cases.count) casos")
-        print("refinado: \(skipRefinement ? "apagado (solo limpiador determinista)" : preferences.refinementModel.displayName)")
+        print("refinado: \(skipRefinement ? "apagado (solo limpiador determinista)" : model.displayName)")
         print("")
 
         var refiner: LocalLLMRefiner?
         if !skipRefinement {
             let store = ModelStore()
             let candidate = LocalLLMRefiner(
-                model: preferences.refinementModel, modelsDirectory: store.rootDirectory)
+                model: model, modelsDirectory: store.rootDirectory)
             do {
                 try await candidate.prepare { _ in }
                 refiner = candidate

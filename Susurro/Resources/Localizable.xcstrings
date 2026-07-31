@@ -451,6 +451,7 @@
         }
       }
     },
+    "El mismo modelo con menos pérdida por cuantización. Puntúa un poco mejor y ocupa el doble.": {},
     "El modelo quedó incompleto. Volvé a descargarlo desde Ajustes.": {
       "localizations": {
         "en": {
@@ -491,6 +492,7 @@
         }
       }
     },
+    "El que mejor le da forma a la oración. Pide más RAM y agrega medio segundo.": {},
     "El recomendado. Es el que limpia bien el español sin desviarse a responderte.": {
       "localizations": {
         "en": {
@@ -1345,6 +1347,8 @@
         }
       }
     },
+    "de 1,0 a 1,6 s": {},
+    "de 1,2 a 2,0 s": {},
     "el dictado del sistema no está disponible en esta Mac": {
       "localizations": {
         "en": {
