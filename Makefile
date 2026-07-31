@@ -81,7 +81,11 @@ run: build ## Compila, mata la instancia previa y lanza
 install: build ## Copia la app a /Applications
 	@pkill -f "$(APP_NAME).app/Contents/MacOS/$(APP_NAME)" 2>/dev/null || true
 	@rm -rf "$(INSTALL_DIR)/$(APP_NAME).app"
-	@cp -R "$(APP)" "$(INSTALL_DIR)/"
+	@# `ditto` y no `cp -R`, igual que al armar el zip y el dmg: es la
+	@# herramienta que preserva enlaces simbólicos y atributos extendidos de un
+	@# bundle. Una copia que pierda alguno invalida la firma, y eso no se nota
+	@# hasta que la app no abre.
+	@ditto "$(APP)" "$(INSTALL_DIR)/$(APP_NAME).app"
 	@echo "✓ instalada en $(INSTALL_DIR)/$(APP_NAME).app"
 
 .PHONY: test

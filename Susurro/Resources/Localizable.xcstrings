@@ -2,6 +2,26 @@
   "sourceLanguage": "es",
   "strings": {
     "": {},
+    "%@ %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ de %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ de %2$@"
+          }
+        }
+      }
+    },
     "%@ necesita una versión más nueva de macOS.": {
       "localizations": {
         "en": {
@@ -54,6 +74,28 @@
         }
       }
     },
+    "%@ — %@": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ — %2$@"
+          }
+        }
+      }
+    },
+    "%@ — %lld%%": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ — %2$lld%%"
+          }
+        }
+      }
+    },
+    "%@/s": {},
+    "22 de 46": {},
     "25 idiomas europeos, incluido español": {
       "localizations": {
         "en": {
@@ -74,6 +116,7 @@
         }
       }
     },
+    "45 de 46": {},
     "Abrir Ajustes": {
       "localizations": {
         "en": {
@@ -245,6 +288,7 @@
         }
       }
     },
+    "Buscando los archivos…": {},
     "Cambiaste de app mientras se transcribía. El texto quedó en el portapapeles: pegalo con ⌘V.": {
       "localizations": {
         "en": {
@@ -255,6 +299,7 @@
         }
       }
     },
+    "Cargando en memoria…": {},
     "Cerca de 100 idiomas": {
       "localizations": {
         "en": {
@@ -285,6 +330,7 @@
         }
       }
     },
+    "Compilando para el Neural Engine": {},
     "Con estructura": {
       "localizations": {
         "en": {
@@ -345,6 +391,7 @@
         }
       }
     },
+    "Demora típica": {},
     "Descargado": {
       "localizations": {
         "en": {
@@ -355,6 +402,8 @@
         }
       }
     },
+    "Descargado y listo": {},
+    "Descargando": {},
     "Descargando %@: %lld%%": {
       "localizations": {
         "en": {
@@ -421,6 +470,7 @@
         }
       }
     },
+    "Dónde corre": {},
     "El equilibrio recomendado: rápido, preciso y multilingüe.": {
       "localizations": {
         "en": {
@@ -481,6 +531,7 @@
         }
       }
     },
+    "El más capaz de la familia, pero en esta Mac casi nunca llega a tiempo y el texto sale sin corregir.": {},
     "El más liviano y el más rápido, si dictás únicamente en inglés.": {
       "localizations": {
         "en": {
@@ -543,6 +594,9 @@
         }
       }
     },
+    "En esta Mac se pasa del tiempo disponible en casi todos los dictados, y cuando eso pasa el texto se inserta sin corregir. Su 19 % de puntuación es por lentitud, no por capacidad: en una Mac más rápida podría ser el mejor.": {},
+    "Error en español": {},
+    "Es el que mejor limpia cuando contesta, pero en dictados largos con los dos idiomas entreverados no llega a tiempo y ahí el texto sale sin tocar. Además pide 5,6 GB de memoria.": {},
     "Es para escuchar lo que dictás. El audio se procesa acá mismo y se descarta apenas se transcribe: no se guarda ni se envía a ningún lado.": {
       "localizations": {
         "en": {
@@ -593,6 +647,7 @@
         }
       }
     },
+    "Estos son los que mejor midieron en las pruebas. No hace falta que decidas nada ahora.": {},
     "Falló la transcripción: %@": {
       "localizations": {
         "en": {
@@ -767,6 +822,7 @@
         }
       }
     },
+    "Llegó tarde": {},
     "MIT": {},
     "MLX Swift · MIT": {},
     "Mantenela apretada mientras hablás y soltala para insertar el texto. Dos toques rápidos dejan el dictado enganchado hasta que la vuelvas a apretar. Esc cancela.": {
@@ -819,6 +875,7 @@
         }
       }
     },
+    "Medido en esta Mac sobre 46 dictados de prueba.": {},
     "Micrófono": {
       "localizations": {
         "en": {
@@ -889,6 +946,7 @@
         }
       }
     },
+    "Muletillas": {},
     "Más liviano y algo más rápido que el recomendado, a cambio de puntuar un poco peor.": {},
     "Más liviano y más rápido, pero limpia bastante menos. Mejor en inglés que en español.": {
       "localizations": {
@@ -900,6 +958,8 @@
         }
       }
     },
+    "Neural Engine": {},
+    "No entiende español. Si dictás una frase en español, el resultado va a ser inservible.": {},
     "No escuché nada.": {
       "localizations": {
         "en": {
@@ -996,6 +1056,7 @@
         }
       }
     },
+    "Para entender lo que decís": {},
     "Para idiomas que Parakeet no cubre. Más lento y puede inventar texto sobre silencio.": {
       "localizations": {
         "en": {
@@ -1006,6 +1067,7 @@
         }
       }
     },
+    "Para puntuar y sacar muletillas": {},
     "Parakeet 110M (solo inglés)": {
       "localizations": {
         "en": {
@@ -1056,6 +1118,7 @@
         }
       }
     },
+    "Prefiero elegirlos yo": {},
     "Preparando el modelo… %lld%%": {
       "localizations": {
         "en": {
@@ -1086,7 +1149,9 @@
         }
       }
     },
+    "Puntuación": {},
     "Qwen3 — Alibaba Cloud": {},
+    "Recomendado": {},
     "Reconocimiento de voz": {
       "localizations": {
         "en": {
@@ -1127,6 +1192,7 @@
         }
       }
     },
+    "Saca las muletillas casi tan bien como los grandes, pero pone poco más de la mitad de las comas y los signos de apertura que hacen falta.": {},
     "Salir de Susurro": {
       "localizations": {
         "en": {
@@ -1137,6 +1203,7 @@
         }
       }
     },
+    "Se descargan ahora, una sola vez: %@. Podés dictar apenas termine el primero.": {},
     "Se desconectó el micrófono durante el dictado.": {
       "localizations": {
         "en": {
@@ -1147,6 +1214,7 @@
         }
       }
     },
+    "Según quien entrenó el modelo. No verificado en esta Mac.": {},
     "Si el modelo tarda más de un segundo y medio, o si devuelve algo que no se parece a lo que dictaste, Susurro descarta el refinado e inserta la transcripción cruda. Nunca vas a recibir una respuesta del modelo en vez de tu texto.": {
       "localizations": {
         "en": {
@@ -1188,6 +1256,7 @@
         }
       }
     },
+    "Sobre silencio o ruido tiende a inventar texto que nadie dijo. Conviene solo para idiomas que Parakeet no cubre.": {},
     "Solo inglés": {
       "localizations": {
         "en": {
@@ -1329,6 +1398,8 @@
         }
       }
     },
+    "Ya elegimos por vos": {},
+    "cerca de 2,0 s": {},
     "de 0,3 a 0,6 s": {
       "localizations": {
         "en": {
@@ -1382,6 +1453,9 @@
         }
       }
     },
+    "falta 1 min": {},
+    "faltan %lld min": {},
+    "faltan %lld s": {},
     "macOS necesita que lo apruebes.": {
       "localizations": {
         "en": {
@@ -1431,7 +1505,9 @@
           }
         }
       }
-    }
+    },
+    "nunca": {},
+    "·": {}
   },
   "version": "1.0"
 }

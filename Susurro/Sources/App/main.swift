@@ -17,7 +17,26 @@ if Benchmark.shouldRun() {
     exit(status)
 }
 
+// Bajo XCTest la app es solo el contenedor del bundle de tests, y no tiene que
+// arrancar como app.
+//
+// Esto no es higiene abstracta: hacía daño real. El esquema usa la app como
+// `TEST_HOST`, así que cada `xcodebuild test` la lanzaba de verdad, corría
+// `AppDelegate` y `prepareEngines()` empezaba a descargar modelos **en el
+// directorio real de la persona**. Una segunda instancia peleando por los
+// mismos archivos con la app que ya estaba corriendo, y muerta a los pocos
+// segundos cuando terminaban los tests: el modelo quedaba con el manifiesto
+// abierto y el directorio vacío. Correr los tests rompía la instalación.
+//
+// Se detecta por la variable de entorno que inyecta XCTest, no por buscar la
+// clase `XCTestCase`: la variable existe desde antes de que se cargue el bundle,
+// que es justo cuando hace falta decidir.
+let isHostingTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    || ProcessInfo.processInfo.environment["XCTestBundlePath"] != nil
+
 let application = NSApplication.shared
 let delegate = AppDelegate()
-application.delegate = delegate
+if !isHostingTests {
+    application.delegate = delegate
+}
 application.run()
