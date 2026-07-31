@@ -82,7 +82,11 @@ enum RefinementGuard {
         "no", "ni", "sin", "nunca", "jamas", "tampoco", "nadie",
         "ninguno", "ninguna", "ningun",
         "not", "never", "neither", "nor", "without",
+        "nothing", "nobody", "none", "hardly", "barely", "scarcely",
+        // Las contracciones llegan sin apóstrofo porque `key` lo saca.
         "dont", "doesnt", "didnt", "wont", "cant", "cannot", "isnt", "arent",
+        "wasnt", "werent", "havent", "hasnt", "hadnt", "shouldnt", "wouldnt",
+        "couldnt", "aint", "nt",
     ]
 
     /// Muletillas conocidas. Se descuentan del cálculo de borrado porque
@@ -129,7 +133,7 @@ enum RefinementGuard {
         // Negaciones, números e identificadores no se borran.
         for index in result.deletedIndices {
             let token = tokens[index]
-            guard isProtected(token) else { continue }
+            guard isProtected(token) || completesNegation(at: index, in: tokens) else { continue }
             // …salvo que sea una repetición: «no, no, no vamos» → «No vamos»
             // es correcto, y ahí el token borrado tiene un vecino idéntico que
             // sobrevive.
@@ -138,6 +142,38 @@ enum RefinementGuard {
         }
 
         return nil
+    }
+
+    /// Palabras que sólo son parte de una negación si hay una negación antes.
+    ///
+    /// El español tiene concordancia negativa: «no hay **nada**», «sin decirle
+    /// **nada** a **nadie**», «nunca vi **nada** igual». Ahí «nada» carga el
+    /// sentido y borrarla lo invierte. Pero «y nada, quedó listo» es un tic
+    /// puro, y prohibir su borrado sería castigar la limpieza que se encargó.
+    ///
+    /// La diferencia no está en la palabra sino en si hay una negación abierta
+    /// antes, en la misma oración. Por eso no puede vivir en `negations`, que
+    /// se consulta sin contexto, ni en `fillers`, que la declara siempre
+    /// descartable. Estaba en `fillers` y en ningún lado más: se podía borrar
+    /// la «nada» de «no hay nada» y el guardarraíl lo aprobaba.
+    private static let negativePolarity: Set<String> = [
+        "nada", "nadie", "ninguno", "ninguna", "ningun", "nunca", "jamas",
+        "anything", "anyone", "anybody", "ever",
+    ]
+
+    /// Si el token cierra una negación abierta antes en la misma oración.
+    private static func completesNegation(
+        at index: Int, in tokens: [TextProjection.Token]
+    ) -> Bool {
+        guard negativePolarity.contains(tokens[index].key) else { return false }
+        var cursor = index - 1
+        while cursor >= 0 {
+            // La oración anterior no cuenta: su negación no alcanza hasta acá.
+            if tokens[cursor].trail.contains(where: { ".!?…".contains($0) }) { return false }
+            if negations.contains(tokens[cursor].key) { return true }
+            cursor -= 1
+        }
+        return false
     }
 
     private static func isProtected(_ token: TextProjection.Token) -> Bool {
@@ -161,7 +197,7 @@ enum RefinementGuard {
     /// borran los dos primeros, y el primero no tiene ningún vecino inmediato
     /// que sobreviva —el de su derecha también se borró—. Con una ventana de
     /// tres, el «no» que quedó sigue estando a la vista.
-    private static let repetitionWindow = 3
+    private static let repetitionWindow = 2
 
     /// Si cerca del token borrado sobrevive otro con la misma palabra.
     ///

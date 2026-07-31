@@ -181,4 +181,47 @@ struct PreferencesTests {
         let reloaded = Preferences(defaults: store)
         #expect(reloaded.asrModel.id == ModelCatalog.parakeetEnglishFast.id)
     }
+
+    // MARK: - Regresiones que encontró la auditoría
+
+    @Test("no borra palabras con significado al final de la oración")
+    func keepsMeaningfulTrailingWords() {
+        // Sin coma delante, «nada», «viste» y «right» son el objeto de una
+        // negación, el verbo y el predicado. Antes se borraban igual.
+        #expect(FillerStripper.strip("En la caja no hay nada.") == "En la caja no hay nada.")
+        #expect(FillerStripper.strip("¿Lo viste?") == "¿Lo viste?")
+        #expect(FillerStripper.strip("The answer is right.") == "The answer is right.")
+        #expect(FillerStripper.strip("Make a left and then a right.")
+                == "Make a left and then a right.")
+    }
+
+    @Test("con coma delante sí son tics y se van")
+    func stripsTrailingTicsAfterComma() {
+        #expect(FillerStripper.strip("Quedó listo, viste.") == "Quedó listo.")
+        #expect(FillerStripper.strip("Ya está, nada.") == "Ya está.")
+    }
+
+    @Test("distingue el atenuador del inglés de su lectura literal")
+    func disambiguatesEnglishHedges() {
+        // Literales: no se tocan.
+        #expect(FillerStripper.strip("do you know if the deploy went out")
+                == "Do you know if the deploy went out")
+        #expect(FillerStripper.strip("you know the answer") == "You know the answer")
+        #expect(FillerStripper.strip("what kind of error is it") == "What kind of error is it")
+        #expect(FillerStripper.strip("we need some kind of fallback")
+                == "We need some kind of fallback")
+        #expect(FillerStripper.strip("i mean what i say") == "I mean what i say")
+
+        // Atenuadores: se van.
+        #expect(FillerStripper.strip("we should you know postpone the launch")
+                == "We should postpone the launch")
+        #expect(FillerStripper.strip("it is kind of slow") == "It is slow")
+    }
+
+    @Test("«o sea» se limpia salvo en «ya sea A o sea B»")
+    func keepsDisjunctiveSubjunctive() {
+        #expect(FillerStripper.strip("o sea, hay que restaurar") == "Hay que restaurar")
+        #expect(FillerStripper.strip("ya sea una cosa o sea otra")
+                == "Ya sea una cosa o sea otra")
+    }
 }

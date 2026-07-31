@@ -387,13 +387,45 @@ enum TextProjection {
         core.folding(options: .diacriticInsensitive, locale: nil) != core
     }
 
+    /// Devuelve la palabra de quien habló con la caja que propuso el modelo.
+    ///
+    /// Existe porque las dos reglas de abajo fusionaban dos decisiones que no
+    /// tienen nada que ver: *¿lleva tilde?*, que es semántica y la gana quien
+    /// habla, y *¿va en mayúscula?*, que es ortográfica y la gana el modelo —
+    /// es literalmente para lo que está.
+    ///
+    /// Al devolver `src.core` textual se descartaban las dos. Como `key` folda
+    /// tildes **y** mayúsculas, «el» contra «El» entraba por la misma puerta
+    /// que «si» contra «sí», sin que hubiera ninguna tilde en disputa. El ASR
+    /// entrega el dictado sin puntuar, así que cada corte de oración que
+    /// inventa el modelo arranca una palabra en mayúscula: si esa palabra era
+    /// «el» o «se» —dos de los arranques más comunes del español— la mayúscula
+    /// se perdía. Medido:
+    ///
+    ///     modelo:  El deploy salió bien. El merge también. Se cerró todo.
+    ///     salía:   El deploy salió bien. el merge también. se cerró todo.
+    ///
+    /// Y el guardarraíl lo aceptaba, porque no se borró ni se inventó nada.
+    private static func speakerWord(_ source: Token, casedLike model: Token) -> String {
+        guard let modelInitial = model.core.first,
+              let sourceInitial = source.core.first,
+              modelInitial.isCased, sourceInitial.isCased,
+              modelInitial.isUppercase != sourceInitial.isUppercase
+        else { return source.core }
+
+        let initial = modelInitial.isUppercase
+            ? sourceInitial.uppercased()
+            : sourceInitial.lowercased()
+        return initial + source.core.dropFirst()
+    }
+
     private static func rendered(source: [Token], output: [Token]) -> [String] {
         if source.count == 1, output.count == 1 {
             let src = source[0], out = output[0]
             if src.key == out.key, src.core != out.core {
                 // Estas la tilde las cambia de palabra, no de ortografía.
                 if riskyMonosyllables.contains(src.key) {
-                    return [out.space + out.lead + src.core + out.trail]
+                    return [out.space + out.lead + speakerWord(src, casedLike: out) + out.trail]
                 }
                 // **Sacar una tilde no es lo mismo que ponerla.**
                 //
@@ -415,7 +447,7 @@ enum TextProjection {
                 // no estaba, en cambio, casi siempre es una reparación. Así que
                 // se acepta agregar y se rechaza quitar.
                 if isAccented(src.core), !isAccented(out.core) {
-                    return [out.space + out.lead + src.core + out.trail]
+                    return [out.space + out.lead + speakerWord(src, casedLike: out) + out.trail]
                 }
             }
         }
