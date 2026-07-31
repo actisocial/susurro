@@ -208,6 +208,26 @@ jobs:
           codesign --verify --deep --strict "$COPIA"
           echo "::notice::$ZIP · $(du -h "$ZIP" | cut -f1) · firma válida tras descomprimir"
 
+      - name: Empaquetar el dmg
+        run: |
+          # Se publican los dos formatos porque sirven a públicos distintos.
+          #
+          # El .dmg es para la persona que entra a la página de releases: su
+          # ventana pone el ícono al lado del alias a Aplicaciones, y ese
+          # arrastre es lo que evita que macOS termine ejecutando la app desde
+          # una ruta temporal que cambia en cada arranque —lo que haría que los
+          # permisos de micrófono y accesibilidad se pierdan en silencio—.
+          #
+          # El .zip queda porque es lo que consume una máquina: es el formato
+          # que pide Sparkle si algún día hay actualización automática, y el que
+          # permite verificar la firma sin montar nada.
+          #
+          # El script verifica el disco montándolo, así que si el bundle viniera
+          # vacío este paso falla acá y no en la computadora de alguien.
+          Tools/make-dmg.sh \
+            build/dd/Build/Products/Release/Susurro.app \
+            "Susurro-${{ steps.version.outputs.version }}.dmg"
+
       - name: Limpiar el llavero
         if: always()
         run: |
@@ -223,6 +243,7 @@ jobs:
           HAS_APPLE_CREDENTIALS: ${{ secrets.APPLE_ID != '' }}
         run: |
           ZIP="Susurro-${{ steps.version.outputs.version }}.zip"
+          DMG="Susurro-${{ steps.version.outputs.version }}.dmg"
           TAG="${{ steps.version.outputs.tag }}"
 
           if [ "$HAS_APPLE_CREDENTIALS" = "true" ]; then
@@ -250,7 +271,16 @@ jobs:
           - Apple Silicon
 
           ### Instalación
-          Descomprimí el archivo y arrastrá \`Susurro.app\` a la carpeta Aplicaciones.
+          Descargá el **.dmg**, abrilo y arrastrá Susurro a la carpeta Aplicaciones.
+
+          Arrastralo de verdad: si abrís la app desde el disco montado o desde
+          Descargas, macOS la ejecuta desde una ruta temporal que cambia en cada
+          arranque, y los permisos de micrófono y accesibilidad que le des se
+          pierden al cerrarla.
+
+          El **.zip** tiene exactamente la misma app, para quien prefiera
+          descomprimir a mano o automatizar la instalación. Vale la misma
+          advertencia: moverla a Aplicaciones antes de abrirla.
 
           ### Primera ejecución
           Susurro pide micrófono y accesibilidad, y explica para qué sirve cada uno
@@ -266,7 +296,10 @@ jobs:
             EXTRA="--verify-tag"
           fi
 
-          gh release create "$TAG" "$ZIP" \
+          # El .dmg va primero: es el que GitHub muestra arriba en la lista de
+          # archivos, y es el que queremos que descargue quien no venga a
+          # elegir formato.
+          gh release create "$TAG" "$DMG" "$ZIP" \
             --title "Susurro $TAG" \
             --notes-file notes.md \
             $EXTRA

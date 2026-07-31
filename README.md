@@ -18,8 +18,17 @@ desconectá el wifi, seguí dictando.
 
 ## Instalar
 
-Bajá el `.zip` de la [última release](https://github.com/actisocial/susurro/releases/latest),
-descomprimilo y arrastrá Susurro a Aplicaciones.
+Bajá el `.dmg` de la [última release](https://github.com/actisocial/susurro/releases/latest),
+abrilo y arrastrá Susurro a Aplicaciones.
+
+**Arrastralo de verdad, no lo abras desde el disco montado.** Si ejecutás la app
+sin moverla —desde el disco o desde Descargas—, macOS la corre desde una ruta
+temporal que cambia en cada arranque, y como los permisos se indexan por ruta,
+el micrófono y la accesibilidad que le des dejan de valer la próxima vez que la
+abras. No hay ningún aviso cuando pasa; `Susurro --permisos` lo diagnostica.
+
+El `.zip` de la misma release tiene exactamente la misma app, para quien
+prefiera automatizar la instalación. Vale la misma advertencia.
 
 Las compilaciones automáticas no están notarizadas por Apple, así que la primera
 vez macOS va a decir que no puede verificar al desarrollador. Se abre desde
