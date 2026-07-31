@@ -41,6 +41,11 @@ struct Refinement: Sendable {
     let text: String
     let status: Status
 
+    /// Palabras que el modelo escribió y la proyección descartó por no
+    /// corresponderse con nada de lo dicho. No son un error —no llegan al
+    /// texto— pero sí una medida de cuánto se apartó el modelo del encargo.
+    var deviations: Int = 0
+
     enum Status: Sendable, Equatable {
         /// El modelo corrigió algo.
         case refined
@@ -77,5 +82,7 @@ protocol TextRefiner: Actor {
     func prepare(progress: @escaping @Sendable (Double) -> Void) async throws
     func refine(_ transcript: String, mode: RefinementMode, language: LanguageHint) async -> Refinement
     func unload() async
+    /// Espera a que terminen las generaciones canceladas por tiempo.
+    func drain() async
     var isReady: Bool { get async }
 }

@@ -207,6 +207,10 @@ enum SelfTest {
             print("")
         }
 
+        // Igual que en el banco: no se puede llamar a `exit()` con un hilo
+        // todavía adentro de MLX.
+        await refiner?.drain()
+
         if rejections > 0 {
             print("· \(rejections) refinado(s) rechazado(s) por los guardarraíles — se insertó el texto crudo, que es el comportamiento correcto")
         }

@@ -108,6 +108,29 @@ final class DictationController {
         pipelineTask?.cancel()
         startSoundTask?.cancel()
         Task { await capture.shutdown() }
+        waitForRefinerToSettle()
+    }
+
+    /// Bloquea un instante para que ninguna generación quede corriendo dentro de
+    /// MLX cuando el proceso termine.
+    ///
+    /// Al salir se destruyen los objetos estáticos de MLX —entre ellos la caché
+    /// de kernels de Metal—, y un hilo que siga generando en ese momento los usa
+    /// después de liberados: SIGSEGV al cerrar. Sólo puede pasar si el último
+    /// dictado expiró por tiempo y se cierra la app enseguida, así que en la
+    /// práctica la espera es de cero.
+    ///
+    /// Se bloquea a propósito, con tope: `applicationWillTerminate` es
+    /// sincrónico y el proceso muere al volver, así que una tarea suelta no
+    /// llegaría a correr. El tope existe porque colgar el cierre es peor que el
+    /// crash que evita.
+    private func waitForRefinerToSettle() {
+        let done = DispatchSemaphore(value: 0)
+        Task.detached(priority: .userInitiated) { [refiner] in
+            await refiner.drain()
+            done.signal()
+        }
+        _ = done.wait(timeout: .now() + 2)
     }
 
     // MARK: - Gatillo

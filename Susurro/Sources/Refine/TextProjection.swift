@@ -140,8 +140,24 @@ enum TextProjection {
     struct Result {
         let text: String
         /// Tokens de la salida que no se explican con ninguna palabra de la
-        /// entrada. Uno solo ya invalida el refinado.
-        let fabricated: Int
+        /// entrada. La proyección **no los emite** — quedan afuera del texto —
+        /// así que este número no es un daño, es una señal: mide cuánto se
+        /// desvió el modelo de la entrada.
+        let fabricatedWords: [String]
+
+        /// Palabras de la entrada que el modelo reescribió y la proyección
+        /// devolvió a su forma original, anotadas como «dicho → escrito».
+        ///
+        /// A diferencia de las fabricadas, estas **no cuestan texto**: la
+        /// palabra de quien habló queda igual y sólo se adopta la puntuación.
+        /// Se cuentan porque un modelo que reescribe mucho está haciendo otra
+        /// tarea, y eso vuelve dudosa también su puntuación.
+        let rewrittenWords: [String]
+
+        var fabricated: Int { fabricatedWords.count }
+
+        /// Cuánto se apartó el modelo de lo dicho, en palabras.
+        var deviations: Int { fabricatedWords.count + rewrittenWords.count }
         /// Índices de los tokens de la entrada que se borraron.
         let deletedIndices: [Int]
         let sourceTokens: [Token]
@@ -176,6 +192,29 @@ enum TextProjection {
     /// Costo de borrar un token de la entrada.
     private static let deletionCost = 10
 
+    /// Costo de que el modelo reescriba una palabra por otra.
+    ///
+    /// Este movimiento existe porque sin él la alineación tenía un agujero que
+    /// costaba palabras enteras. Cuando el modelo escribe «haced» donde se dijo
+    /// «hacé», el único camino disponible era borrar «hacé» y descartar
+    /// «haced» — y el verbo desaparecía del texto. Medido: «Dale, hacé el
+    /// rollback y después me pasás el link» salía «Dale, el rollback y después
+    /// me el link», y «el pipeline está failing en el step de build» perdía
+    /// *failing* y *step* porque el modelo los había traducido.
+    ///
+    /// Con el movimiento explícito, la reescritura se reconoce como lo que es y
+    /// **gana la palabra de quien habló**, quedándose con la puntuación que
+    /// propuso el modelo. La reescritura pasa de costar una palabra a costar
+    /// nada, y encima queda contada como desvío.
+    ///
+    /// El valor es mucho más caro que borrar y mucho más barato que fabricar.
+    /// Más caro que borrar para que una muletilla que el modelo sacó bien se
+    /// siga leyendo como un borrado y no se empareje de prepo con la palabra
+    /// siguiente. Más barato que fabricar porque reescribir es lo que un modelo
+    /// hace cuando trabaja de más, mientras que fabricar es lo que hace cuando
+    /// no está haciendo el trabajo.
+    private static let substitutionCost = 100
+
     /// Penalización por agrupar. Es lo que hace que, cuando dos alineaciones
     /// explican lo mismo, gane la más simple.
     ///
@@ -205,7 +244,9 @@ enum TextProjection {
         let out = tokenize(candidate)
 
         guard !src.isEmpty else {
-            return Result(text: "", fabricated: out.count, deletedIndices: [], sourceTokens: src)
+            return Result(
+                text: "", fabricatedWords: out.map(\.core), rewrittenWords: [],
+                deletedIndices: [], sourceTokens: src)
         }
 
         let n = src.count, m = out.count
@@ -241,6 +282,14 @@ enum TextProjection {
                     from[i][j + 1] = (0, 1)
                 }
 
+                // Sustituir: el modelo escribió otra palabra en el mismo lugar.
+                // Se marca con un `di` negativo para poder distinguirlo de una
+                // coincidencia al reconstruir; el paso es siempre de a uno.
+                if i < n, j < m, here + substitutionCost < cost[i + 1][j + 1] {
+                    cost[i + 1][j + 1] = here + substitutionCost
+                    from[i + 1][j + 1] = (-1, 1)
+                }
+
                 // Emparejar grupos.
                 guard i < n, j < m else { continue }
                 for a in 1...min(maxGroup, n - i) {
@@ -272,13 +321,23 @@ enum TextProjection {
         // «qué ¿Por».
         var groups: [[String]] = []
         var deleted: [Int] = []
-        var fabricated = 0
+        var fabricated: [String] = []
+        var rewritten: [String] = []
         var i = n, j = m
 
         while i > 0 || j > 0 {
             let (di, dj) = from[i][j]
 
-            if di > 0 && dj > 0 {
+            if di < 0 {
+                // Reescritura. Se emite el núcleo de quien habló con la
+                // puntuación, el espaciado y los signos de apertura que propuso
+                // el modelo: la palabra es tuya, la coma es suya.
+                let source = src[i - 1], model = out[j - 1]
+                groups.append([model.space + model.lead + source.core + model.trail])
+                rewritten.append("\(source.core) → \(model.core)")
+                i -= 1
+                j -= 1
+            } else if di > 0 && dj > 0 {
                 // Coincidencia: se emite lo que produjo el modelo, que es lo
                 // que trae la puntuación, las mayúsculas y las tildes nuevas.
                 let sourceGroup = Array(src[(i - di)..<i])
@@ -290,7 +349,7 @@ enum TextProjection {
                 deleted.append(i - 1)
                 i -= 1
             } else {
-                fabricated += 1
+                fabricated.append(out[j - 1].core)
                 j -= 1
             }
         }
@@ -302,7 +361,8 @@ enum TextProjection {
 
         return Result(
             text: text,
-            fabricated: fabricated,
+            fabricatedWords: fabricated.reversed(),
+            rewrittenWords: rewritten.reversed(),
             deletedIndices: deleted.sorted(),
             sourceTokens: src)
     }
@@ -322,12 +382,41 @@ enum TextProjection {
         "si", "el", "tu", "mi", "se", "mas", "de", "te", "aun", "solo",
     ]
 
+    /// Si la palabra lleva alguna tilde o diéresis.
+    private static func isAccented(_ core: String) -> Bool {
+        core.folding(options: .diacriticInsensitive, locale: nil) != core
+    }
+
     private static func rendered(source: [Token], output: [Token]) -> [String] {
         if source.count == 1, output.count == 1 {
             let src = source[0], out = output[0]
-            if src.key == out.key, src.core != out.core,
-               riskyMonosyllables.contains(src.key) {
-                return [out.space + out.lead + src.core + out.trail]
+            if src.key == out.key, src.core != out.core {
+                // Estas la tilde las cambia de palabra, no de ortografía.
+                if riskyMonosyllables.contains(src.key) {
+                    return [out.space + out.lead + src.core + out.trail]
+                }
+                // **Sacar una tilde no es lo mismo que ponerla.**
+                //
+                // Como la clave de comparación ignora tildes, «pasás» y «pasas»
+                // se alinean como coincidencia y se emite la versión del modelo
+                // — que es justamente lo que restituye las tildes que el ASR se
+                // comió. Pero el mismo camino deja pasar el caso inverso: el
+                // modelo *quita* la tilde y la palabra cambia sin que nada lo
+                // note, porque no hubo ni borrado ni fabricación que contar.
+                //
+                // Medido acá: «dale hacé el rollback y después me pasás el
+                // link» salía «…me pasas el link». El «hacé» se salvaba porque
+                // el modelo escribió «haz» y eso sí es otra clave; el «pasás»
+                // se perdía en silencio por ser la misma.
+                //
+                // Los dos sentidos no son simétricos. Si el ASR escribió la
+                // tilde es porque la oyó, y quitársela es la normalización a
+                // peninsular que este modelo hace todo el tiempo. Ponerla donde
+                // no estaba, en cambio, casi siempre es una reparación. Así que
+                // se acepta agregar y se rechaza quitar.
+                if isAccented(src.core), !isAccented(out.core) {
+                    return [out.space + out.lead + src.core + out.trail]
+                }
             }
         }
         return output.map(\.rendered)

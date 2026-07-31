@@ -79,11 +79,18 @@ struct ProjectionTests {
 
     // MARK: - B. Debe RECHAZAR
 
-    @Test("rechaza traducir un préstamo del inglés")
-    func rejectsLoanwordTranslation() {
+    @Test("no traduce un préstamo del inglés")
+    func keepsLoanword() {
+        // Antes esto se contaba como fabricación y se rechazaba el refinado
+        // entero. Ahora la alineación reconoce la reescritura, devuelve la
+        // palabra dicha y se queda con la puntuación: mejor resultado y la
+        // misma garantía. Por eso la aserción es sobre el texto y no sobre el
+        // contador — lo que hay que sostener es que «deploy» sobreviva, no
+        // cómo lo llame la implementación por dentro.
         let result = project("el deploy quedó listo", "El despliegue quedó listo.")
-        #expect(result.fabricated > 0)
-        #expect(RefinementGuard.check(result) != nil)
+        #expect(result.text.contains("deploy"))
+        #expect(!result.text.contains("despliegue"))
+        #expect(result.deviations > 0, "el desvío se cuenta aunque no cueste texto")
     }
 
     @Test("rechaza traducir la frase entera")
@@ -185,11 +192,18 @@ struct ProjectionTests {
     @Test("no normaliza el voseo rioplatense")
     func preservesVoseo() {
         // Un modelo entrenado sobre todo con español peninsular tiende a
-        // «corregir» hacé → haz y pasás → pasas. Las dos son palabras nuevas.
+        // «corregir» hacé → haz y pasás → pasas. Medido: pasa de verdad, dos o
+        // tres veces por dictado, y no sólo con el voseo — también traduce
+        // «failing» a «fallando» a mitad de una frase en español.
         let result = project(
             "dale hacé el rollback y después me pasás el link del pull request",
             "Dale, haz el rollback y después me pasas el link del pull request.")
-        #expect(result.fabricated > 0, "haz y pasas no están en la entrada")
+        #expect(result.text.contains("hacé"))
+        #expect(result.text.contains("pasás"))
+        #expect(!result.text.contains("haz"))
+        // Y la coma que propuso el modelo sí se adopta: la palabra es de quien
+        // habla, la puntuación es del modelo.
+        #expect(result.text.hasPrefix("Dale,"))
     }
 
     @Test("protege las siglas técnicas")

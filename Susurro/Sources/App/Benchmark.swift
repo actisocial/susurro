@@ -45,6 +45,17 @@ enum Benchmark {
 
         var fabricated = 0
         var rejected = 0
+        /// Casos donde el modelo no llegó a tiempo.
+        ///
+        /// Se cuenta aparte de los rechazos porque degrada igual pero por un
+        /// motivo opuesto, y confundirlos lleva a arreglar lo que no es. Un
+        /// rechazo dice «el modelo contestó algo que no me sirve»; un timeout
+        /// dice «el modelo no contestó». Los dos terminan devolviendo el texto
+        /// determinista sin puntuar, así que en la métrica final se ven idénticos
+        /// — y el arreglo de uno no tiene nada que ver con el del otro.
+        var timedOut = 0
+        /// Desvíos que la proyección descartó sin que el guardarraíl rechazara.
+        var deviations = 0
         var latencies: [TimeInterval] = []
 
         /// Puntuación acertada, de más y de menos.
@@ -174,30 +185,52 @@ enum Benchmark {
             let stripped = FillerStripper.strip(testCase.raw)
             var actual = stripped
             var wasRejected = false
+            var wasLate = false
+            var deviations = 0
+            var rejectionReason = ""
 
             if let refiner {
                 let refinement = await refiner.refine(
                     stripped, mode: preferences.refinementMode, language: preferences.language)
                 actual = refinement.text
-                if case .rejected = refinement.status { wasRejected = true }
+                deviations = refinement.deviations
+                switch refinement.status {
+                case .rejected(let reason):
+                    wasRejected = true
+                    rejectionReason = reason
+                case .timedOut:
+                    wasLate = true
+                default:
+                    break
+                }
             }
 
             let latency = Date().timeIntervalSince(started)
             let result = evaluate(raw: testCase.raw, expected: testCase.expected, actual: actual)
 
-            overall.accumulate(result, latency: latency, rejected: wasRejected)
-            byLanguage[testCase.lang, default: Score()]
-                .accumulate(result, latency: latency, rejected: wasRejected)
+            overall.accumulate(
+                result, latency: latency, rejected: wasRejected, timedOut: wasLate, deviations: deviations)
+            byLanguage[testCase.lang, default: Score()].accumulate(
+                result, latency: latency, rejected: wasRejected, timedOut: wasLate, deviations: deviations)
 
             if verbose || !result.exact {
                 let mark = result.exact ? "✓" : "·"
-                print("\(mark) \(testCase.id)\(wasRejected ? "  [rechazado]" : "")")
+                let why = wasRejected ? "  [rechazado: \(rejectionReason)]"
+                    : (wasLate ? "  [tarde]" : "")
+                print("\(mark) \(testCase.id)\(why)")
                 if !result.exact {
                     print("    esperado: \(testCase.expected)")
                     print("    obtenido: \(actual)")
                 }
             }
         }
+
+        // Antes de imprimir y salir hay que esperar a las generaciones que se
+        // abandonaron por timeout. `exit()` destruye los objetos estáticos de
+        // MLX, y si queda un hilo adentro de la GPU usándolos, el proceso se
+        // cae con SIGSEGV justo antes de mostrar los resultados — que es
+        // exactamente cómo se perdieron dos corridas completas del 4B.
+        await refiner?.drain()
 
         print("")
         report("TOTAL", overall)
@@ -290,7 +323,7 @@ enum Benchmark {
         print("""
             \(name) exacto \(pct(score.exactRate))  ·  borrado F1 \(pct(score.f1)) (P \(pct(score.precision)) R \(pct(score.recall)))  \
             ·  puntuación F1 \(pct(score.punctF1)) (P \(pct(score.punctPrecision)) R \(pct(score.punctRecall)))  \
-            ·  \(score.rejected) rech.  ·  p50 \(ms(score.percentile(0.5))) p95 \(ms(score.percentile(0.95)))
+            ·  \(score.rejected) rech. \(score.timedOut) tarde \(score.deviations) desv.  ·  p50 \(ms(score.percentile(0.5))) p95 \(ms(score.percentile(0.95)))
             """)
     }
 
@@ -305,7 +338,8 @@ enum Benchmark {
 
 extension Benchmark.Score {
     fileprivate mutating func accumulate(
-        _ result: Benchmark.CaseResult, latency: TimeInterval, rejected: Bool
+        _ result: Benchmark.CaseResult, latency: TimeInterval,
+        rejected: Bool, timedOut: Bool, deviations: Int
     ) {
         total += 1
         if result.exact { exactMatches += 1 }
@@ -317,6 +351,8 @@ extension Benchmark.Score {
         punctSpurious += result.punctSpurious
         punctMissing += result.punctMissing
         if rejected { self.rejected += 1 }
+        if timedOut { self.timedOut += 1 }
+        self.deviations += deviations
         latencies.append(latency)
     }
 }

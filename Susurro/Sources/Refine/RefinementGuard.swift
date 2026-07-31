@@ -21,7 +21,7 @@ enum RefinementGuard {
 
     enum Rejection: Sendable, Equatable {
         /// Apareció al menos una palabra que no estaba en la entrada.
-        case fabricated(count: Int)
+        case fabricated(words: [String])
         case empty
         case deletedTooMuch(rate: Double)
         case deletedLongRun(length: Int)
@@ -29,8 +29,8 @@ enum RefinementGuard {
 
         var reason: String {
             switch self {
-            case .fabricated(let count):
-                return "inventó \(count) palabra(s) que no dijiste"
+            case .fabricated(let words):
+                return "se desvió en \(words.count): «\(words.joined(separator: "», «"))»"
             case .empty:
                 return "no quedó nada"
             case .deletedTooMuch(let rate):
@@ -46,6 +46,30 @@ enum RefinementGuard {
     /// Techo de borrado. Sacar muletillas de un dictado muy cargado ronda el
     /// 20-25 %; pasado el 30 % ya no es limpieza, es resumen.
     private static let maxDeletionRate = 0.30
+
+    /// Techo de desvío. Antes era cero: **una sola** palabra que la proyección
+    /// no pudiera explicar tiraba el refinado entero.
+    ///
+    /// Eso resultó ser demasiado fino, y por un motivo que sólo se vio al
+    /// imprimir qué palabras eran. No eran ruido de tokenización, como parecía:
+    /// eran «hacé» → «haced», «me pasás» → «me paséis», «fixeé» → «he fixado»,
+    /// «failing» → «fallando». El modelo pasa el rioplatense a peninsular y
+    /// traduce los términos técnicos, sistemáticamente, en dos o tres palabras
+    /// por dictado.
+    ///
+    /// La proyección ya atajaba el 100 % de eso —ninguna de esas palabras llega
+    /// nunca al texto—, así que rechazar encima no protegía de nada: sólo tiraba
+    /// la puntuación buena del mismo dictado. Medido, era la causa principal de
+    /// la puntuación floja en español y en mezcla.
+    ///
+    /// El umbral queda como tasa y no como conteo porque lo que importa no es
+    /// que el modelo se haya desviado, sino **cuánto**. Con dos desvíos en
+    /// veinticinco palabras la alineación sigue siendo sólida y las comas caen
+    /// donde tienen que caer. Con un tercio de la salida reescrita ya no se le
+    /// puede creer tampoco la puntuación, porque el alineamiento del que sale
+    /// está tan flojo como el texto. Empatado a propósito con el techo de
+    /// borrado: son dos formas de medir lo mismo, cuánto se apartó de lo dicho.
+    private static let maxFabricationRate = 0.25
 
     /// Corrida contigua máxima. Las muletillas se borran de a una o dos; comerse
     /// una oración entera se ve como una corrida larga.
@@ -74,8 +98,13 @@ enum RefinementGuard {
 
     /// Valida el resultado de la proyección.
     static func check(_ result: TextProjection.Result) -> Rejection? {
-        if result.fabricated > 0 {
-            return .fabricated(count: result.fabricated)
+        let total = result.sourceTokens.count
+        let deviations = result.deviations
+        let offTask = total > 0
+            ? Double(deviations) / Double(total) > maxFabricationRate
+            : deviations > 0
+        if offTask {
+            return .fabricated(words: result.fabricatedWords + result.rewrittenWords)
         }
         if result.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return .empty

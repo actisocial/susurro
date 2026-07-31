@@ -39,15 +39,62 @@ actor LocalLLMRefiner: TextRefiner {
     private var container: ModelContainer?
     private var loadedModel: RefinementModel?
 
+    /// Generaciones canceladas por timeout que todavía no terminaron de morir.
+    ///
+    /// Cancelar en Swift es cooperativo: pide que se corte, no corta. Mientras
+    /// tanto el hilo sigue adentro de MLX. Si el proceso termina en ese momento,
+    /// se destruyen los objetos estáticos de MLX —incluida la caché de kernels
+    /// de Metal— mientras ese hilo los está usando, y eso es un SIGSEGV dentro
+    /// de `CustomKernel::eval_gpu`. Se guardan acá para poder esperarlas de
+    /// verdad antes de bajar la persiana.
+    private var abandoned: [Task<String, Error>] = []
+
     private let modelsDirectory: URL
     private let logger = Logger(subsystem: "com.acti.susurro", category: "Refiner")
 
-    /// Techo de espera. Pasado esto se descarta la respuesta y se usa el crudo.
+    /// Costo fijo de una generación: cargar el prompt y arrancar el muestreo.
+    /// No depende de qué tan largo sea el dictado.
+    var timeoutBase: Duration = .milliseconds(700)
+
+    /// Lo que cuesta cada palabra dictada. La salida es sustractiva, así que
+    /// nunca tiene más palabras que la entrada y este término la acota.
     ///
-    /// Se bajó de 2,5 s a 1,3 s junto con el tope de tokens: como la salida ya
-    /// no puede ser más larga que la entrada, un refinado que se pasa de este
-    /// tiempo no está trabajando, está en un bucle.
-    var timeout: Duration = .milliseconds(1_300)
+    /// Calibrado midiendo, y el resultado fue contraintuitivo. Pasar de 45 a 60
+    /// ms por palabra bajó los timeouts de 5 a 1 sobre 46 casos y subió la
+    /// puntuación de 78 % a 81 % — nada de eso sorprende. Lo que sorprende es
+    /// que **la mediana de latencia también bajó**, de 975 a 931 ms.
+    ///
+    /// El motivo es que un timeout no ahorra tiempo: lo gasta entero y encima
+    /// tira el resultado. Cortar a los 1825 ms un refinado que iba a terminar a
+    /// los 1900 cuesta los 1825 completos y devuelve texto sin puntuar. Ser
+    /// menos impaciente sale más barato que ser impaciente, mientras el margen
+    /// que se agrega sea del orden de lo que a la generación le faltaba.
+    var timeoutPerWord: Duration = .milliseconds(60)
+
+    /// Techo duro. Sobre esto ya no hay dictado que lo justifique: es un bucle.
+    var timeoutCeiling: Duration = .milliseconds(3_000)
+
+    /// Presupuesto de espera para un dictado dado.
+    ///
+    /// Antes era fijo en 1,3 s, y estaba mal por dos motivos que se refuerzan.
+    ///
+    /// El técnico: generar es token a token, así que el tiempo crece con el
+    /// largo de la entrada. Un presupuesto fijo se calibra para el caso medio y
+    /// por lo tanto **corta sistemáticamente los dictados largos** — justo los
+    /// que más necesitan que alguien les ponga las comas. Medido acá: los casos
+    /// de mezcla pesada tenían un p50 de 1907 ms contra un techo de 1300, así
+    /// que la mitad no llegaba nunca y salía sin puntuar. El síntoma se leía
+    /// como «el modelo puntúa mal en mezcla», y no era eso.
+    ///
+    /// El de producto: la paciencia de quien dicta **también** escala con el
+    /// largo. Después de dictar una palabra, medio segundo se siente eterno;
+    /// después de dictar un párrafo de veinte segundos, dos segundos son el
+    /// diez por ciento de lo que ya invirtió y no se notan. Un número fijo se
+    /// equivoca en los dos extremos a la vez: es demasiado lento para lo corto
+    /// y demasiado impaciente para lo largo.
+    func budget(forWords count: Int) -> Duration {
+        min(timeoutCeiling, timeoutBase + timeoutPerWord * count)
+    }
 
     private var model: RefinementModel
 
@@ -122,8 +169,20 @@ actor LocalLLMRefiner: TextRefiner {
     }
 
     func unload() async {
+        await drain()
         container = nil
         loadedModel = nil
+    }
+
+    /// Espera a que mueran las generaciones abandonadas.
+    ///
+    /// Hay que llamarlo antes de terminar el proceso o de soltar el modelo. No
+    /// hace esperar a nadie en el uso normal: para cuando se llega acá, esas
+    /// tareas ya recibieron la cancelación hace rato y sólo falta que la vean.
+    func drain() async {
+        let pending = abandoned
+        abandoned = []
+        for task in pending { _ = await task.result }
     }
 
     // MARK: - Refinado
@@ -172,20 +231,38 @@ actor LocalLLMRefiner: TextRefiner {
         let seed = Self.firstWordCapitalized(clean)
         let instructions = Self.systemPrompt(mode: mode)
 
+        let wordCount = clean.split(whereSeparator: \.isWhitespace).count
+        let deadline = budget(forWords: wordCount)
+
+        // La generación va en una tarea propia y no anónima dentro de un grupo,
+        // para que al vencer el presupuesto quede algo a lo que cancelar y
+        // esperar. Un grupo de tareas devuelve el error del timeout, pero la
+        // generación abandonada seguía viva: nadie se quedaba con la referencia.
+        let work = Task { [container] in
+            try await Self.generate(
+                container: container,
+                instructions: instructions,
+                transcript: clean,
+                seed: seed,
+                parameters: parameters)
+        }
+
         let raw: String
         do {
-            raw = try await withTimeout(timeout) {
-                try await Self.generate(
-                    container: container,
-                    instructions: instructions,
-                    transcript: clean,
-                    seed: seed,
-                    parameters: parameters)
-            }
+            raw = try await withTimeout(deadline) { try await work.value }
         } catch is TimeoutError {
-            logger.notice("el refinado excedió \(self.timeout); se usa el transcripto crudo")
+            logger.notice(
+                "el refinado excedió \(deadline) para \(wordCount) palabras; se usa el crudo")
+            work.cancel()
+            abandoned.append(work)
+            // Cota de seguridad. En uso normal la lista tiene cero o un
+            // elemento, porque entre dos dictados pasan segundos y la
+            // cancelada ya murió. Dictados encadenados sin pausa —el banco de
+            // pruebas— son el único caso que la hace crecer.
+            if abandoned.count > 4 { await drain() }
             return Refinement(text: transcript, status: .timedOut)
         } catch {
+            work.cancel()
             logger.error("el refinado falló: \(error.localizedDescription, privacy: .public)")
             return Refinement(text: transcript, status: .rejected(reason: error.localizedDescription))
         }
@@ -202,12 +279,24 @@ actor LocalLLMRefiner: TextRefiner {
             return Refinement(text: transcript, status: .rejected(reason: rejection.reason))
         }
 
+        // Un desvío tolerado se registra igual. La proyección ya lo descartó
+        // —esas palabras no están en `projection.text`— pero que no haga daño no
+        // lo vuelve invisible: si un modelo empieza a reescribir de a poco, acá
+        // se ve antes de que cruce el umbral y empiece a perder dictados.
+        if projection.deviations > 0 {
+            let words = (projection.fabricatedWords + projection.rewrittenWords)
+                .joined(separator: ", ")
+            logger.notice(
+                "el modelo se desvió en \(projection.deviations) palabra(s): \(words, privacy: .private)")
+        }
+
         let elapsed = Date().timeIntervalSince(started)
         logger.debug("refinado en \(String(format: "%.0f", elapsed * 1000)) ms · \(projection.deletedCount) palabras borradas")
 
         return Refinement(
             text: projection.text,
-            status: projection.text == clean ? .unchanged : .refined)
+            status: projection.text == clean ? .unchanged : .refined,
+            deviations: projection.deviations)
     }
 
     /// La primera palabra de la entrada, capitalizada. Es lo que se precarga en
@@ -256,6 +345,14 @@ actor LocalLLMRefiner: TextRefiner {
 
         var output = seed
         for await item in stream {
+            // Cortar apenas se cancela, y no al final del presupuesto de
+            // tokens. `for await` sobre un AsyncStream no interrumpe a quien
+            // produce: sin esta comprobación, un refinado que expiró seguía
+            // generando en la GPU hasta el tope, compitiendo con el dictado
+            // siguiente y —al salir la app— corriendo mientras MLX destruía sus
+            // objetos estáticos. Ahí estaban los SIGSEGV dentro de
+            // `CustomKernel::eval_gpu`: uso después de liberar.
+            if Task.isCancelled { break }
             if let chunk = item.chunk { output += chunk }
         }
         return output

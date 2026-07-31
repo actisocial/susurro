@@ -451,7 +451,6 @@
         }
       }
     },
-    "El mismo modelo con menos pérdida por cuantización. Puntúa un poco mejor y ocupa el doble.": {},
     "El modelo quedó incompleto. Volvé a descargarlo desde Ajustes.": {
       "localizations": {
         "en": {
@@ -492,7 +491,8 @@
         }
       }
     },
-    "El que mejor le da forma a la oración. Pide más RAM y agrega medio segundo.": {},
+    "El más rápido: el texto aparece casi al instante. Saca las muletillas bien, pero puntúa la mitad.": {},
+    "El recomendado. El que mejor puntúa cuando mezclás español e inglés, y nunca se atrasa.": {},
     "El recomendado. Es el que limpia bien el español sin desviarse a responderte.": {
       "localizations": {
         "en": {
@@ -746,6 +746,7 @@
         }
       }
     },
+    "Limpia mejor que el recomendado en frases cortas y medianas. Pide bastante RAM y se atrasa en dictados largos muy mezclados.": {},
     "Limpieza del texto": {
       "localizations": {
         "en": {
@@ -888,6 +889,7 @@
         }
       }
     },
+    "Más liviano y algo más rápido que el recomendado, a cambio de puntuar un poco peor.": {},
     "Más liviano y más rápido, pero limpia bastante menos. Mejor en inglés que en español.": {
       "localizations": {
         "en": {
@@ -1347,8 +1349,9 @@
         }
       }
     },
+    "de 0,8 a 1,0 s": {},
+    "de 0,9 a 1,3 s": {},
     "de 1,0 a 1,6 s": {},
-    "de 1,2 a 2,0 s": {},
     "el dictado del sistema no está disponible en esta Mac": {
       "localizations": {
         "en": {
