@@ -69,6 +69,12 @@ actor AudioCapture {
     /// dispositivo entre un dictado y el siguiente.
     private var configuredInputFormat: AVAudioFormat?
 
+    /// Dispositivo de entrada del sistema cuando se armó el grafo.
+    ///
+    /// El formato solo no alcanza para saber si cambió el micrófono: dos
+    /// distintos suelen compartirlo. Esto es la identidad real.
+    private var configuredInputDevice: AudioDeviceID?
+
     private var isEngineRunning = false
     private var isRecording = false
 
@@ -81,6 +87,21 @@ actor AudioCapture {
 
     private var shutdownTask: Task<Void, Never>?
     private var levelContinuation: AsyncStream<Float>.Continuation?
+
+    /// Observador de cambios de configuración del motor de audio.
+    ///
+    /// Es lo que avisa cuando cambia el dispositivo de entrada **sin que se
+    /// enchufe ni se desenchufe nada**: elegir otro micrófono en Ajustes del
+    /// Sistema entre dos que ya estaban conectados. Antes solo se escuchaban
+    /// `AVCaptureDeviceWasConnected` y `…Disconnected`, que en ese caso no
+    /// disparan, y la app se quedaba grabando del micrófono anterior.
+    ///
+    /// Había una mitigación parcial en `startEngine()`, que compara el formato
+    /// contra el de la última configuración. No alcanza por dos motivos: dos
+    /// micrófonos distintos suelen compartir formato —48 kHz es lo habitual— y
+    /// entonces la comparación pasa; y con el micrófono caliente el motor ya
+    /// está corriendo, así que `startEngine()` ni se ejecuta.
+    private var configurationObserver: NSObjectProtocol?
 
     private let logger = Logger(subsystem: "com.acti.susurro", category: "AudioCapture")
 
@@ -136,9 +157,30 @@ actor AudioCapture {
     /// recursos del grafo de audio pero no arranca la captura — así el
     /// indicador naranja sigue apagado y el `start()` posterior es barato.
     func prepare() throws {
+        observeConfigurationChanges()
         guard !isEngineRunning else { return }
         try configureEngine()
         engine.prepare()
+    }
+
+    /// Empieza a escuchar los cambios de configuración del motor.
+    ///
+    /// Se engancha acá y no en un `init` porque `prepare()` es lo primero que
+    /// corre siempre, y registrarlo dos veces no hace daño: la guarda se ocupa.
+    private func observeConfigurationChanges() {
+        guard configurationObserver == nil else { return }
+
+        // El `object: engine` es importante: sin él llegan los cambios de
+        // cualquier motor de audio del proceso.
+        configurationObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: engine,
+            queue: nil
+        ) { [weak self] _ in
+            // La notificación llega en una cola cualquiera, así que se vuelve al
+            // actor antes de tocar nada del grafo.
+            Task { await self?.handleInputDeviceChange() }
+        }
     }
 
     /// Toma el micrófono ya mismo, sin grabar todavía.
@@ -265,6 +307,7 @@ actor AudioCapture {
         converter.downmix = true
         self.converter = converter
         self.configuredInputFormat = inputFormat
+        self.configuredInputDevice = Self.defaultInputDeviceID()
 
         input.removeTap(onBus: 0)
         input.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
@@ -278,12 +321,73 @@ actor AudioCapture {
         }
     }
 
+    /// Cuál es el micrófono que el sistema tiene puesto como entrada.
+    ///
+    /// Se pregunta a CoreAudio directamente porque `AVAudioEngine` no lo expone,
+    /// y es la única forma de distinguir «cambió el micrófono» de «cambió el
+    /// formato». Devuelve `nil` si no hay ninguno, que es un estado legítimo
+    /// —una Mac sin micrófono conectado— y no un error.
+    private static func defaultInputDeviceID() -> AudioDeviceID? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+
+        var deviceID = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        let status = AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &deviceID)
+
+        guard status == noErr, deviceID != kAudioObjectUnknown else { return nil }
+        return deviceID
+    }
+
+    /// Nombre del micrófono que se está usando, para poder mostrarlo.
+    ///
+    /// Existe porque «¿agarró el micrófono nuevo?» era imposible de contestar
+    /// desde afuera: la app no decía en ninguna parte de qué entrada estaba
+    /// grabando, así que un cambio de dispositivo que no se detectaba se veía
+    /// idéntico a uno que sí. Con el nombre a la vista, la respuesta es mirar.
+    func currentInputDeviceName() -> String? {
+        guard let deviceID = Self.defaultInputDeviceID() else { return nil }
+
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioObjectPropertyName,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+
+        var name: CFString = "" as CFString
+        var size = UInt32(MemoryLayout<CFString>.size)
+        let status = withUnsafeMutablePointer(to: &name) {
+            AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, $0)
+        }
+        guard status == noErr else { return nil }
+
+        let resolved = name as String
+        return resolved.isEmpty ? nil : resolved
+    }
+
     private func startEngine() throws {
-        // El dispositivo pudo haber cambiado desde el último `prepare()`
-        // —alguien enchufó auriculares, se desconectó la interfaz USB— y en ese
-        // caso el conversor guardado ya no sirve.
+        // El dispositivo pudo haber cambiado desde el último `prepare()`, y hay
+        // que darse cuenta antes de grabar del micrófono equivocado.
+        //
+        // Se comparan dos cosas y no una. El formato detecta los cambios
+        // groseros —una interfaz USB a 96 kHz en lugar del micrófono interno—
+        // pero **no alcanza**: dos micrófonos distintos comparten formato a
+        // menudo, y a 48 kHz mono la comparación no ve ninguna diferencia
+        // mientras el grafo sigue apuntando al anterior. Por eso se compara
+        // además el identificador del dispositivo de entrada del sistema, que
+        // es la pregunta que de verdad importa.
+        //
+        // Esta comprobación no depende de que llegue ninguna notificación, así
+        // que cubre el caso en que el motor estaba detenido cuando la persona
+        // cambió de micrófono — que es lo más común, porque el motor solo queda
+        // prendido si se activó mantener el micrófono listo.
         let currentFormat = engine.inputNode.inputFormat(forBus: 0)
-        if converter == nil || configuredInputFormat != currentFormat {
+        let currentDevice = Self.defaultInputDeviceID()
+        if converter == nil || configuredInputFormat != currentFormat
+            || configuredInputDevice != currentDevice
+        {
             try configureEngine()
         }
 
@@ -294,6 +398,7 @@ actor AudioCapture {
             engine.inputNode.removeTap(onBus: 0)
             converter = nil
             configuredInputFormat = nil
+            configuredInputDevice = nil
             throw CaptureError.engineFailed(error.localizedDescription)
         }
 
@@ -304,11 +409,42 @@ actor AudioCapture {
     /// Rearma el grafo tras un cambio de dispositivo de entrada.
     func handleInputDeviceChange() {
         let wasRecording = isRecording
+        // Estaba tomado el micrófono sin grabar: hay que volver a dejarlo así.
+        let wasWarm = isEngineRunning && !isRecording
+
         shutdown()
-        try? prepare()
+
+        // El conversor se descarta siempre, sin comparar formatos.
+        //
+        // La comparación existe en `startEngine()` como atajo barato, pero acá
+        // sería un error: dos micrófonos distintos comparten formato a menudo
+        // —48 kHz es lo habitual— y entonces la comparación diría que no cambió
+        // nada mientras el grafo sigue apuntando al dispositivo anterior. Cuando
+        // el sistema avisa que la configuración cambió, se rehace y listo.
+        converter = nil
+        configuredInputFormat = nil
+        configuredInputDevice = nil
+
+        do {
+            try prepare()
+            let format = engine.inputNode.inputFormat(forBus: 0)
+            let device = currentInputDeviceName() ?? "desconocido"
+            logger.notice(
+                "entrada rearmada — \(device, privacy: .public) · \(format.sampleRate, privacy: .public) Hz × \(format.channelCount, privacy: .public) ch")
+        } catch {
+            logger.error("no se pudo rearmar la entrada: \(error.localizedDescription, privacy: .public)")
+        }
+
+        // Volver a calentarlo si lo estaba. Sin esto, cambiar de micrófono
+        // apagaba en silencio la función de mantenerlo listo, y el siguiente
+        // dictado perdía la primera sílaba sin ningún motivo visible.
+        if wasWarm, keepsMicrophoneWarm {
+            try? warmUp()
+        }
+
         if wasRecording {
-            // Si el micrófono desapareció en medio de un dictado no se puede
-            // seguir; quien orquesta se entera porque `isActive` pasa a falso.
+            // Si el micrófono cambió en medio de un dictado no se puede seguir;
+            // quien orquesta se entera porque `isActive` pasa a falso.
             logger.notice("el dispositivo de entrada cambió durante la grabación")
         }
     }

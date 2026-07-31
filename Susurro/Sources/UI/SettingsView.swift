@@ -139,6 +139,19 @@ private struct GeneralSettings: View {
                     title: "Micrófono",
                     state: controller.permissions.microphone,
                     pane: .microphone)
+
+                // Cuál está usando, no solo si tiene permiso.
+                //
+                // Sin esto, «cambié de micrófono y no lo agarró» era imposible
+                // de comprobar desde la app: no decía en ninguna parte de qué
+                // entrada estaba grabando, así que un cambio que no se detectaba
+                // se veía igual que uno que sí.
+                if let device = controller.inputDeviceName {
+                    LabeledContent("Entrada en uso") {
+                        Text(device).foregroundStyle(.secondary)
+                    }
+                    .font(.callout)
+                }
                 PermissionRow(
                     title: "Accesibilidad",
                     state: controller.permissions.accessibility,
@@ -153,6 +166,7 @@ private struct GeneralSettings: View {
         .formStyle(.grouped)
         .onAppear {
             controller.permissions.startPolling()
+            controller.refreshInputDevice()
             recordedShortcut = KeyboardShortcuts.getShortcut(for: .dictate)
         }
         .onDisappear { controller.permissions.stopPolling() }

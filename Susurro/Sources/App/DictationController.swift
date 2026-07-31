@@ -55,6 +55,9 @@ final class DictationController {
     /// no contar ninguna: se llamaba con `{ _ in }` y 2,5 GB bajaban en secreto.
     private(set) var refinementProgress: PreparationProgress?
 
+    /// Nombre del micrófono en uso, para mostrarlo en Ajustes.
+    private(set) var inputDeviceName: String?
+
     /// Nivel de entrada 0…1 para la onda del HUD.
     private(set) var inputLevel: Float = 0
     /// Último texto insertado. Vive solo hasta el próximo dictado: no hay
@@ -533,11 +536,21 @@ final class DictationController {
         let wasRecording = state.isRecording
         Task {
             await capture.handleInputDeviceChange()
+            inputDeviceName = await capture.currentInputDeviceName()
             if wasRecording {
                 state = .idle
                 notify(String(localized: "Se desconectó el micrófono durante el dictado."))
             }
         }
+    }
+
+    /// Vuelve a leer qué micrófono está usando el sistema.
+    ///
+    /// Lo llama Ajustes al abrirse: cambiar de micrófono no genera ninguna
+    /// notificación si los dos dispositivos ya estaban conectados, así que
+    /// preguntarlo es la única forma de que la pantalla diga la verdad.
+    func refreshInputDevice() {
+        Task { inputDeviceName = await capture.currentInputDeviceName() }
     }
 
     // MARK: - Nivel de entrada
