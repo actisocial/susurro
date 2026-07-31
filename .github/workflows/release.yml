@@ -231,6 +231,13 @@ jobs:
             SIGNING_NOTE=$'**Esta compilación no está notarizada.** La primera vez, macOS va a decir que no puede verificar al desarrollador.\n\nPara abrirla: Ajustes del Sistema › Privacidad y seguridad › «Abrir de todos modos». O desde la terminal: `xattr -dr com.apple.quarantine /Applications/Susurro.app`\n\nSi preferís no confiar en un binario, el código es abierto: `make install` lo compila y lo firma con tu propia identidad.'
           fi
 
+          # El delimitador va sin comillas porque hacen falta `$TAG` y
+          # `$SIGNING_NOTE` expandidos — pero eso deja activa también la
+          # sustitución de comandos, así que **cada acento grave del texto va
+          # escapado**. Sin escapar, la shell ejecuta lo que hay entre acentos y
+          # lo reemplaza por su salida: en la v1.0.1 «arrastrá `Susurro.app` a
+          # la carpeta» se publicó como «arrastrá  a la carpeta», porque
+          # `Susurro.app` se corrió como comando y no imprimió nada.
           cat > notes.md <<EOF
           ## Susurro $TAG
 
@@ -243,7 +250,7 @@ jobs:
           - Apple Silicon
 
           ### Instalación
-          Descomprimí el archivo y arrastrá `Susurro.app` a la carpeta Aplicaciones.
+          Descomprimí el archivo y arrastrá \`Susurro.app\` a la carpeta Aplicaciones.
 
           ### Primera ejecución
           Susurro pide micrófono y accesibilidad, y explica para qué sirve cada uno
