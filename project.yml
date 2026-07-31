@@ -81,6 +81,8 @@ targets:
         product: MLXLMCommon
       - package: MLXSwiftLM
         product: MLXHuggingFace
+      - package: MLXSwiftLM
+        product: MLX
       - package: SwiftHuggingFace
         product: HuggingFace
       - package: SwiftTransformers
