@@ -26,7 +26,9 @@ actor AppleSpeechEngine: SpeechEngine {
 
     // MARK: - Preparación
 
-    func prepare(_ model: ASRModel, progress: @escaping @Sendable (Double) -> Void) async throws {
+    func prepare(
+        _ model: ASRModel, progress: @escaping @Sendable (PreparationProgress) -> Void
+    ) async throws {
         guard SpeechTranscriber.isAvailable else {
             throw SpeechEngineError.engineUnavailable(
                 String(localized: "el dictado del sistema no está disponible en esta Mac"))
@@ -39,7 +41,7 @@ actor AppleSpeechEngine: SpeechEngine {
         }
 
         if transcriber != nil, locale == target {
-            progress(1)
+            progress(PreparationProgress(phase: .loading, fraction: 1))
             return
         }
 
@@ -52,8 +54,13 @@ actor AppleSpeechEngine: SpeechEngine {
             supporting: [transcriber]
         ) {
             logger.info("descargando el paquete de idioma del sistema para \(target.identifier, privacy: .public)")
+            // Acá los bytes los administra macOS y no hay un directorio propio
+            // que medir, así que este es el único motor donde el progreso sigue
+            // siendo una fracción sola. Al menos la fase dice la verdad.
             let observation = request.progress.observe(\.fractionCompleted) { p, _ in
-                progress(p.fractionCompleted)
+                progress(
+                    PreparationProgress(
+                        phase: .downloading(file: 0, of: 0), fraction: p.fractionCompleted))
             }
             defer { observation.invalidate() }
             try await request.downloadAndInstall()
@@ -61,7 +68,7 @@ actor AppleSpeechEngine: SpeechEngine {
 
         self.transcriber = transcriber
         self.locale = target
-        progress(1)
+        progress(PreparationProgress(phase: .loading, fraction: 1))
         logger.info("motor del sistema listo (\(target.identifier, privacy: .public))")
     }
 

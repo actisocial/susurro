@@ -116,8 +116,13 @@ final class StatusItemController: NSObject {
 
         case .preparing(let progress):
             stopAnimating()
-            button.image = Self.symbol("arrow.down.circle")
-            button.toolTip = String(localized: "Preparando el modelo… \(Int(progress * 100))%")
+            // El ícono también cambia por fase: la flecha hacia abajo mientras
+            // baja, y el engranaje mientras compila. Es la única señal de que
+            // algo sigue pasando en el tramo donde el número no se mueve.
+            button.image = Self.symbol(Self.symbolName(for: progress.phase))
+            button.toolTip = [progress.summary, progress.detail]
+                .compactMap { $0 }
+                .joined(separator: " — ")
 
         case .listening(let locked):
             startAnimating()
@@ -249,7 +254,8 @@ final class StatusItemController: NSObject {
 
         switch controller.state {
         case .preparing(let progress):
-            items.append(String(localized: "Descargando \(preferences.asrModel.displayName): \(Int(progress * 100))%"))
+            items.append(contentsOf: Self.lines(
+                for: progress, model: preferences.asrModel.displayName))
         case .failed(let message):
             items.append(message)
         default:
@@ -259,10 +265,44 @@ final class StatusItemController: NSObject {
             }
         }
 
+        // La descarga del refinador va aparte y puede seguir después de que el
+        // dictado ya funciona, así que se muestra en cualquier estado. Antes no
+        // se mostraba nunca: eran 2,5 GB invisibles, cinco veces lo que decía la
+        // línea de arriba.
+        if let refinement = controller.refinementProgress {
+            items.append(contentsOf: Self.lines(
+                for: refinement, model: preferences.refinementModel.displayName))
+        }
+
         if let notice = controller.lastNotice, case .idle = controller.state {
             items.append(notice)
         }
         return items
+    }
+
+    /// Dos renglones por descarga: qué está pasando, y el detalle con bytes.
+    ///
+    /// Van separados a propósito. El primero cambia poco y da el contexto; el
+    /// segundo se mueve todo el tiempo y es el que prueba que la app está viva.
+    /// Antes había un solo renglón con un porcentaje, y un porcentaje quieto
+    /// durante minutos se lee como un cuelgue — que fue exactamente lo que pasó.
+    private static func lines(for progress: PreparationProgress, model: String) -> [String] {
+        var lines = [String(localized: "\(progress.summary) \(model)")]
+        if let detail = progress.detail {
+            lines.append("    " + detail)
+        }
+        return lines
+    }
+
+    /// Ícono por fase. Compilar no usa la red, y la flecha de descarga ahí
+    /// miente.
+    private static func symbolName(for phase: PreparationProgress.Phase) -> String {
+        switch phase {
+        case .listing:     return "magnifyingglass"
+        case .downloading: return "arrow.down.circle"
+        case .compiling:   return "gearshape"
+        case .loading:     return "memorychip"
+        }
     }
 
     // MARK: - Acciones

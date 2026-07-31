@@ -24,9 +24,21 @@ struct RefinementModel: Identifiable, Codable, Sendable, Hashable {
     let license: String
     /// Latencia típica para un dictado corto, medida en un M2 Pro.
     let typicalLatency: String
+    /// Qué tan bien anda, medido. Ver `ModelMetrics`.
+    let metrics: ModelMetrics
 
     var formattedDownloadSize: String {
         ByteCountFormatter.string(fromByteCount: downloadBytes, countStyle: .file)
+    }
+
+    /// Carpeta donde la caché de Hugging Face deposita este repositorio.
+    ///
+    /// El formato es el de `huggingface_hub`: `models--org--nombre`. Hace falta
+    /// para poder medir cuánto lleva bajado *este* modelo; apuntar al directorio
+    /// raíz contaría también Parakeet y los demás refinadores, y la cifra sería
+    /// cualquier cosa.
+    var cacheFolderName: String {
+        "models--" + repository.replacingOccurrences(of: "/", with: "--")
     }
 }
 
@@ -47,7 +59,14 @@ enum RefinementCatalog {
         residentBytes: 1_900 * 1_000_000,
         tagline: String(localized: "Más liviano y algo más rápido que el recomendado, a cambio de puntuar un poco peor."),
         license: "Apache-2.0",
-        typicalLatency: String(localized: "de 0,8 a 1,0 s")
+        typicalLatency: String(localized: "de 0,8 a 1,0 s"),
+        metrics: ModelMetrics(
+            facts: [
+                .init(label: String(localized: "Puntuación"), value: "77 %"),
+                .init(label: String(localized: "Muletillas"), value: "88 %"),
+                .init(label: String(localized: "Demora típica"), value: "0,8 s"),
+            ],
+            provenance: .measuredHere)
     )
 
     /// Para quien priorice latencia por encima de todo.
@@ -68,7 +87,15 @@ enum RefinementCatalog {
         residentBytes: 800 * 1_000_000,
         tagline: String(localized: "El más rápido: el texto aparece casi al instante. Saca las muletillas bien, pero puntúa la mitad."),
         license: "Apache-2.0",
-        typicalLatency: String(localized: "de 0,3 a 0,6 s")
+        typicalLatency: String(localized: "de 0,3 a 0,6 s"),
+        metrics: ModelMetrics(
+            facts: [
+                .init(label: String(localized: "Puntuación"), value: "46 %"),
+                .init(label: String(localized: "Muletillas"), value: "88 %"),
+                .init(label: String(localized: "Demora típica"), value: "0,4 s"),
+            ],
+            caveat: String(localized: "Saca las muletillas casi tan bien como los grandes, pero pone poco más de la mitad de las comas y los signos de apertura que hacen falta."),
+            provenance: .measuredHere)
     )
 
     /// El recomendado.
@@ -112,22 +139,55 @@ enum RefinementCatalog {
         residentBytes: 3_000 * 1_000_000,
         tagline: String(localized: "El recomendado. El que mejor puntúa cuando mezclás español e inglés, y nunca se atrasa."),
         license: "Apache-2.0",
-        typicalLatency: String(localized: "de 0,9 a 1,3 s")
+        typicalLatency: String(localized: "de 0,9 a 1,3 s"),
+        metrics: ModelMetrics(
+            facts: [
+                .init(label: String(localized: "Puntuación"), value: "82 %"),
+                .init(label: String(localized: "Muletillas"), value: "85 %"),
+                .init(label: String(localized: "Demora típica"), value: "0,9 s"),
+                .init(label: String(localized: "Llegó tarde"), value: String(localized: "nunca")),
+            ],
+            provenance: .measuredHere)
     )
 
-    // Qwen3.5 4B se probó y **no entra al catálogo**, aunque sea el más capaz de
-    // la familia. En esta Mac llegó tarde en 45 de los 46 casos del banco, con
-    // un p50 de 2025 ms contra un presupuesto que en la mayoría de los dictados
-    // ronda los 1500. Un modelo que no contesta a tiempo no da un refinado peor:
-    // da **cero** refinado, porque se inserta el texto sin puntuar. Su
-    // puntuación medida fue 19 % contra 77 % del 2B, y esa diferencia es
-    // enteramente latencia, no capacidad.
-    //
-    // Ofrecerlo en la lista sería ofrecer una trampa: se elige por el nombre
-    // —«4B tiene que ser mejor que 2B»— y se recibe una app que dejó de
-    // corregir, sin ninguna pista de por qué. En una Mac bastante más rápida
-    // que ésta la conclusión podría darse vuelta, pero la app no tiene forma de
-    // saberlo, y el riesgo no es simétrico.
+    /// El más capaz de la familia, y el que peor rinde en esta Mac.
+    ///
+    /// Estuvo fuera del catálogo un tiempo. El razonamiento era que ofrecerlo
+    /// sería una trampa: se elige por el nombre —«4B tiene que ser mejor que
+    /// 2B»— y se recibe una app que dejó de corregir, sin ninguna pista de por
+    /// qué. El dato que lo motivaba es real y sigue vigente: en esta Mac llegó
+    /// tarde en 45 de los 46 casos del banco, con un p50 de 2025 ms contra un
+    /// presupuesto que en la mayoría de los dictados ronda los 1500. Y un modelo
+    /// que no contesta a tiempo no da un refinado peor: da **cero** refinado,
+    /// porque se inserta el texto sin puntuar. Su puntuación medida fue 19 %
+    /// contra 77 % del 2B, y esa diferencia es enteramente latencia.
+    ///
+    /// Vuelve porque esconderlo resolvía el problema equivocado. La trampa no
+    /// era que el modelo estuviera en la lista: era que la lista no decía nada
+    /// sobre cómo rinde cada uno, así que la única información disponible para
+    /// elegir era el nombre. Con las cifras al lado, quien lo elija lo hace
+    /// sabiendo. Y hay un caso legítimo: en una Mac bastante más rápida que
+    /// ésta la conclusión puede darse vuelta, y la app no tiene forma de
+    /// saberlo por adelantado. Sacar la opción le imponía a esa persona una
+    /// medición hecha en otra máquina.
+    static let qwen35_4b = RefinementModel(
+        id: "qwen3.5-4b-4bit",
+        displayName: "Qwen3.5 4B",
+        repository: "mlx-community/Qwen3.5-4B-4bit",
+        downloadBytes: 2_900 * 1_000_000,
+        residentBytes: 3_200 * 1_000_000,
+        tagline: String(localized: "El más capaz de la familia, pero en esta Mac casi nunca llega a tiempo y el texto sale sin corregir."),
+        license: "Apache-2.0",
+        typicalLatency: String(localized: "cerca de 2,0 s"),
+        metrics: ModelMetrics(
+            facts: [
+                .init(label: String(localized: "Puntuación"), value: "19 %"),
+                .init(label: String(localized: "Demora típica"), value: "2,0 s"),
+                .init(label: String(localized: "Llegó tarde"), value: String(localized: "45 de 46")),
+            ],
+            caveat: String(localized: "En esta Mac se pasa del tiempo disponible en casi todos los dictados, y cuando eso pasa el texto se inserta sin corregir. Su 19 % de puntuación es por lentitud, no por capacidad: en una Mac más rápida podría ser el mejor."),
+            provenance: .measuredHere)
+    )
 
     /// Gemma 4, en su variante entrenada para cuantizar.
     ///
@@ -164,11 +224,25 @@ enum RefinementCatalog {
         residentBytes: 5_600 * 1_000_000,
         tagline: String(localized: "Limpia mejor que el recomendado en frases cortas y medianas. Pide bastante RAM y se atrasa en dictados largos muy mezclados."),
         license: "Gemma Terms of Use",
-        typicalLatency: String(localized: "de 1,0 a 1,6 s")
+        typicalLatency: String(localized: "de 1,0 a 1,6 s"),
+        metrics: ModelMetrics(
+            facts: [
+                .init(label: String(localized: "Puntuación"), value: "84 % en español"),
+                .init(label: String(localized: "Muletillas"), value: "92 %"),
+                .init(label: String(localized: "Demora típica"), value: "1,3 s"),
+                .init(label: String(localized: "Llegó tarde"), value: String(localized: "22 de 46")),
+            ],
+            caveat: String(localized: "Es el que mejor limpia cuando contesta, pero en dictados largos con los dos idiomas entreverados no llega a tiempo y ahí el texto sale sin tocar. Además pide 5,6 GB de memoria."),
+            provenance: .measuredHere)
     )
 
+    /// El orden es el de la medición, no el del tamaño.
+    ///
+    /// Importa: la lista es lo primero que se lee, y una lista ordenada por
+    /// tamaño insinúa que más grande es mejor, que es justo lo que el banco
+    /// desmiente. El 4B va último por eso mismo, con su advertencia a la vista.
     static let all: [RefinementModel] = [
-        qwen35_2b_8bit, qwen35_2b, qwen35_08b, gemma4_e2b,
+        qwen35_2b_8bit, qwen35_2b, qwen35_08b, gemma4_e2b, qwen35_4b,
     ]
 
     static let `default` = qwen35_2b_8bit

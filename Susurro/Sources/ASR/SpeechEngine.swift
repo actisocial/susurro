@@ -93,7 +93,14 @@ enum SpeechEngineError: LocalizedError, Sendable, Equatable {
 protocol SpeechEngine: Actor {
     /// Descarga el modelo si falta y lo deja cargado en memoria.
     /// Llamarlo dos veces con el mismo modelo no debe hacer trabajo de nuevo.
-    func prepare(_ model: ASRModel, progress: @escaping @Sendable (Double) -> Void) async throws
+    ///
+    /// El progreso es `PreparationProgress` y no un `Double` porque la fracción
+    /// sola resultó ilegible: la mitad de la operación es compilar, no
+    /// descargar, y ahí el número se queda quieto por minutos. Sin la fase, eso
+    /// se ve exactamente igual que un cuelgue.
+    func prepare(
+        _ model: ASRModel, progress: @escaping @Sendable (PreparationProgress) -> Void
+    ) async throws
 
     /// Transcribe audio mono de 16 kHz.
     func transcribe(_ samples: [Float], language: LanguageHint) async throws -> Transcript

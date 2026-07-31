@@ -1,25 +1,32 @@
 import SwiftUI
 
-/// Puesta en marcha: cuatro pasos y afuera.
+/// Puesta en marcha: cinco pasos y afuera.
 ///
-/// Dos reglas de la HIG que se respetan acá y que además son sentido común:
+/// Tres reglas que se respetan acá:
 ///
 /// - **Antes de pedir un permiso hay que explicar para qué.** La alerta del
 ///   sistema aparece después del «Continuar», nunca de sorpresa. Y en una
 ///   pantalla que antecede a un permiso no va un botón de «Saltear»: o se
 ///   explica y se pide, o no se pide.
-/// - **Una descarga grande no puede trabar el arranque.** Por eso el modelo
-///   sugerido al principio es el del sistema, que no descarga nada: la app
-///   funciona a los diez segundos de instalada. Parakeet se ofrece con la app
-///   ya andando, cuando la persona ya vio para qué sirve.
+/// - **Los modelos vienen elegidos, no se preguntan.** Pedirle a alguien que
+///   todavía no usó la app que elija entre cinco modelos de reconocimiento y
+///   cinco de limpieza es descargarle encima una decisión que no tiene con qué
+///   tomar. Susurro elige el que ganó la medición y sigue; el que quiera
+///   cambiarlo tiene la puerta abierta y señalizada.
+/// - **Pero se cuenta qué se eligió y por qué.** Elegir por la persona sin
+///   decírselo es lo que hace que después aparezca una descarga de gigas sin
+///   explicación, que fue exactamente lo que pasaba: el último paso mencionaba
+///   el modelo de reconocimiento en una línea al pie y no decía una palabra del
+///   de limpieza, que pesa cinco veces más.
 struct OnboardingView: View {
     @Bindable var controller: DictationController
     @Bindable var preferences: Preferences
+    let openSettings: () -> Void
     let finish: () -> Void
 
     @State private var step = 0
 
-    private var stepCount: Int { 4 }
+    private var stepCount: Int { 5 }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,7 +57,8 @@ struct OnboardingView: View {
         case 0: welcome
         case 1: microphone
         case 2: accessibility
-        default: hotkey
+        case 3: hotkey
+        default: models
         }
     }
 
@@ -129,12 +137,66 @@ struct OnboardingView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 4)
 
-            Text("Empezás con \(preferences.asrModel.displayName). En Ajustes podés cambiar a un modelo más preciso cuando quieras.")
+        }
+    }
+
+    /// Qué modelos quedaron elegidos, por qué, y cuánto pesa eso.
+    ///
+    /// El paso existe porque su ausencia se notaba: la app arrancaba y empezaba
+    /// a bajar 3 GB sin haberlo mencionado nunca. La descarga era legítima y las
+    /// elecciones eran las correctas —son las que ganaron el banco— pero nadie
+    /// se había enterado, y una app que consume gigas en silencio se siente rota
+    /// aunque esté haciendo lo que corresponde.
+    private var models: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 38, weight: .light))
+                .foregroundStyle(Color.accentColor)
+            Text("Ya elegimos por vos")
+                .font(.title2)
+            Text("Estos son los que mejor midieron en las pruebas. No hace falta que decidas nada ahora.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.top, 4)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(spacing: 10) {
+                ChosenModel(
+                    role: String(localized: "Para entender lo que decís"),
+                    name: preferences.asrModel.displayName,
+                    reason: preferences.asrModel.tagline,
+                    size: preferences.asrModel.formattedDownloadSize)
+
+                if preferences.refinementMode != .off {
+                    ChosenModel(
+                        role: String(localized: "Para puntuar y sacar muletillas"),
+                        name: preferences.refinementModel.displayName,
+                        reason: preferences.refinementModel.tagline,
+                        size: preferences.refinementModel.formattedDownloadSize)
+                }
+            }
+            .padding(.top, 2)
+
+            // La suma va aparte y en grande: es el número que a alguien le
+            // importa antes de que su conexión empiece a trabajar.
+            Text("Se descargan ahora, una sola vez: \(totalDownload). Podés dictar apenas termine el primero.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button("Prefiero elegirlos yo") { openSettings() }
+                .buttonStyle(.link)
+                .font(.callout)
         }
+    }
+
+    private var totalDownload: String {
+        var bytes = preferences.asrModel.downloadBytes
+        if preferences.refinementMode != .off {
+            bytes += preferences.refinementModel.downloadBytes
+        }
+        return ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 
     // MARK: - Navegación
@@ -174,6 +236,9 @@ struct OnboardingView: View {
                 .keyboardShortcut(.defaultAction)
             }
 
+        case 3:
+            Button("Continuar") { step = 4 }.keyboardShortcut(.defaultAction)
+
         default:
             Button("Listo") { finish() }.keyboardShortcut(.defaultAction)
         }
@@ -186,6 +251,40 @@ struct OnboardingView: View {
                 preferences.trigger = $0
                 controller.installHotkeys()
             })
+    }
+}
+
+/// Un modelo ya elegido, con su rol, su motivo y su peso.
+private struct ChosenModel: View {
+    let role: String
+    let name: String
+    let reason: String
+    let size: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color.accentColor)
+                .font(.system(size: 14))
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(role)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                HStack(spacing: 5) {
+                    Text(name).fontWeight(.medium)
+                    Text(size).font(.caption).foregroundStyle(.secondary)
+                }
+                Text(reason)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(.quaternary.opacity(0.4), in: .rect(cornerRadius: 8))
     }
 }
 

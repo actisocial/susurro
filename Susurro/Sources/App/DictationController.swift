@@ -8,7 +8,7 @@ import OSLog
 enum DictationState: Equatable {
     case idle
     /// Cargando modelos. No se puede dictar todavía.
-    case preparing(progress: Double)
+    case preparing(PreparationProgress)
     case listening(locked: Bool)
     case transcribing
     case refining
@@ -44,6 +44,17 @@ final class DictationController {
     // MARK: - Estado observable
 
     private(set) var state: DictationState = .idle
+
+    /// Progreso del modelo de limpieza, o `nil` si no hay nada en curso.
+    ///
+    /// Va aparte de `state` porque son dos cosas independientes: el refinado se
+    /// prepara *sin bloquear* —el dictado crudo tiene que andar aunque el LLM
+    /// todavía no esté— así que puede estar bajando mientras el estado ya es
+    /// `.idle` y se puede dictar. Meterlo en la misma máquina de estados
+    /// obligaría a elegir cuál de las dos cosas contar, y hoy la respuesta era
+    /// no contar ninguna: se llamaba con `{ _ in }` y 2,5 GB bajaban en secreto.
+    private(set) var refinementProgress: PreparationProgress?
+
     /// Nivel de entrada 0…1 para la onda del HUD.
     private(set) var inputLevel: Float = 0
     /// Último texto insertado. Vive solo hasta el próximo dictado: no hay
@@ -160,7 +171,14 @@ final class DictationController {
         // transcribir: es preferible decir "todavía estoy cargando" que perder
         // el audio de alguien que ya empezó a hablar.
         if case .preparing(let progress) = state {
-            notify(String(localized: "Preparando el modelo… \(Int(progress * 100))%"))
+            // Con el detalle cuando lo hay: quien intenta dictar en medio de la
+            // descarga quiere saber cuánto falta, no que le repitan que espere.
+            let percent = Int(progress.fraction * 100)
+            if let detail = progress.detail {
+                notify(String(localized: "\(progress.summary) — \(detail)"))
+            } else {
+                notify(String(localized: "\(progress.summary) — \(percent)%"))
+            }
             return
         }
         guard !state.isBusy else { return }
@@ -356,20 +374,20 @@ final class DictationController {
         }
 
         // Sin descargar y sin red, no tiene sentido bloquear el arranque.
-        state = .preparing(progress: 0)
+        state = .preparing(.starting)
 
         do {
             try await currentEngine().prepare(model) { [weak self] progress in
-                // El 1.0 final se descarta a propósito. El callback despacha al
-                // actor principal de forma asincrónica, así que ese último aviso
-                // puede llegar *después* de que `prepareEngines` ya puso el
-                // estado en reposo, y volvería a marcar «preparando» para
+                // El aviso final se descarta a propósito. El callback despacha
+                // al actor principal de forma asincrónica, así que ese último
+                // aviso puede llegar *después* de que `prepareEngines` ya puso
+                // el estado en reposo, y volvería a marcar «preparando» para
                 // siempre. Quien decide que terminó es el retorno de `prepare`,
                 // no el porcentaje.
-                guard progress < 1 else { return }
+                guard progress.fraction < 1 else { return }
                 Task { @MainActor in
                     guard let self, case .preparing = self.state else { return }
-                    self.state = .preparing(progress: progress)
+                    self.state = .preparing(progress)
                 }
             }
             state = .idle
@@ -386,8 +404,31 @@ final class DictationController {
         // El LLM se carga después y sin bloquear: el dictado crudo tiene que
         // funcionar aunque el refinado todavía no esté listo.
         if preferences.refinementMode != .off {
-            Task.detached(priority: .utility) { [refiner] in
-                try? await refiner.prepare { _ in }
+            prepareRefiner()
+        }
+    }
+
+    /// Prepara el modelo de limpieza en segundo plano, informando el avance.
+    ///
+    /// Se llama desde tres lugares distintos —arranque, cambio de modelo, cambio
+    /// de modo— y en los tres estaba escrito como `prepare { _ in }`. Ese
+    /// descarte repetido era todo el motivo por el que la descarga más pesada de
+    /// la app no se veía en ningún lado.
+    private func prepareRefiner() {
+        // El reporte se arma acá, todavía en el actor principal, y al task
+        // desprendido viaja solo un closure `Sendable`. Capturar `self` adentro
+        // del task y después saltar de vuelta al actor principal compila mal en
+        // Swift 6 —y con razón: sería mandar una referencia aislada afuera de su
+        // actor para leerla desde cualquier hilo.
+        let report: @Sendable (PreparationProgress?) -> Void = { [weak self] progress in
+            Task { @MainActor in self?.refinementProgress = progress }
+        }
+
+        Task.detached(priority: .utility) { [refiner] in
+            defer { report(nil) }
+            try? await refiner.prepare { progress in
+                guard progress.fraction < 1 else { return }
+                report(progress)
             }
         }
     }
@@ -403,9 +444,7 @@ final class DictationController {
     func switchRefinementModel(to model: RefinementModel) async {
         preferences.refinementModel = model
         await refiner.use(model)
-        Task.detached(priority: .utility) { [refiner] in
-            try? await refiner.prepare { _ in }
-        }
+        prepareRefiner()
     }
 
     // MARK: - Acciones desde la interfaz
@@ -453,9 +492,7 @@ final class DictationController {
         if preferences.refinementMode == .off {
             await refiner.unload()
         } else if await !refiner.isReady {
-            Task.detached(priority: .utility) { [refiner] in
-                try? await refiner.prepare { _ in }
-            }
+            prepareRefiner()
         }
     }
 

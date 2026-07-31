@@ -79,7 +79,7 @@ struct Refinement: Sendable {
 
 /// Contrato del refinador de texto.
 protocol TextRefiner: Actor {
-    func prepare(progress: @escaping @Sendable (Double) -> Void) async throws
+    func prepare(progress: @escaping @Sendable (PreparationProgress) -> Void) async throws
     func refine(_ transcript: String, mode: RefinementMode, language: LanguageHint) async -> Refinement
     func unload() async
     /// Espera a que terminen las generaciones canceladas por tiempo.

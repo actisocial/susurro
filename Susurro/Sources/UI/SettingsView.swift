@@ -263,6 +263,7 @@ private struct ModelSettings: View {
                         model: model,
                         isSelected: preferences.asrModel.id == model.id,
                         isInstalled: controller.isInstalled(model),
+                        progress: preferences.asrModel.id == model.id ? asrProgress : nil,
                         select: { Task { await controller.switchModel(to: model) } },
                         delete: { controller.deleteModel(model); refreshStorage() }
                     )
@@ -288,15 +289,22 @@ private struct ModelSettings: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 if preferences.refinementMode != .off {
-                    Picker("Modelo de refinado", selection: refinementModelBinding) {
-                        ForEach(RefinementCatalog.all) { model in
-                            Text("\(model.displayName) · \(model.formattedDownloadSize)").tag(model)
-                        }
+                    // Antes esto era un menú desplegable con nombre y tamaño, y
+                    // el texto explicativo de abajo hablaba solo del que ya
+                    // estaba elegido. O sea que para comparar dos modelos había
+                    // que elegir uno, leer, elegir el otro, leer —y en el
+                    // camino disparar dos descargas de gigas—. Con filas, las
+                    // cifras de todos están a la vista sin tocar nada.
+                    ForEach(RefinementCatalog.all) { model in
+                        RefinementRow(
+                            model: model,
+                            isSelected: preferences.refinementModel.id == model.id,
+                            isRecommended: model.id == RefinementCatalog.default.id,
+                            progress: preferences.refinementModel.id == model.id
+                                ? controller.refinementProgress : nil,
+                            select: { Task { await controller.switchRefinementModel(to: model) } }
+                        )
                     }
-                    Text(preferences.refinementModel.tagline)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             } header: {
                 Text("Limpieza del texto")
@@ -323,6 +331,12 @@ private struct ModelSettings: View {
         storageUsed = controller.totalModelDiskUsage()
     }
 
+    /// El progreso del modelo de reconocimiento, sacado del estado del dictado.
+    private var asrProgress: PreparationProgress? {
+        if case .preparing(let progress) = controller.state { return progress }
+        return nil
+    }
+
     private var modeBinding: Binding<RefinementMode> {
         Binding(
             get: { preferences.refinementMode },
@@ -332,10 +346,58 @@ private struct ModelSettings: View {
             })
     }
 
-    private var refinementModelBinding: Binding<RefinementModel> {
-        Binding(
-            get: { preferences.refinementModel },
-            set: { model in Task { await controller.switchRefinementModel(to: model) } })
+}
+
+/// Fila de un modelo de limpieza. Misma anatomía que la de reconocimiento, pero
+/// con la marca de recomendado, que en este catálogo sí está respaldada por
+/// mediciones propias.
+private struct RefinementRow: View {
+    let model: RefinementModel
+    let isSelected: Bool
+    let isRecommended: Bool
+    let progress: PreparationProgress?
+    let select: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
+                .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                .font(.system(size: 15))
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(model.displayName).fontWeight(.medium)
+                    if isRecommended {
+                        Text("Recomendado")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.accentColor.opacity(0.15), in: .capsule)
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+                Text(model.tagline)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                MetricsStrip(metrics: model.metrics)
+
+                Text("\(model.formattedDownloadSize) · \(model.license)")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+
+                if let progress {
+                    PreparationStrip(progress: progress)
+                        .padding(.top, 2)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .contentShape(.rect)
+        .onTapGesture(perform: select)
+        .padding(.vertical, 2)
     }
 }
 
@@ -343,6 +405,8 @@ private struct ModelRow: View {
     let model: ASRModel
     let isSelected: Bool
     let isInstalled: Bool
+    /// Progreso en vivo, solo para el modelo elegido y solo mientras trabaja.
+    let progress: PreparationProgress?
     let select: () -> Void
     let delete: () -> Void
 
@@ -353,23 +417,39 @@ private struct ModelRow: View {
                 .font(.system(size: 15))
                 .onTapGesture(perform: select)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(model.displayName).fontWeight(.medium)
                     if isInstalled, model.requiresDownload {
-                        Image(systemName: "arrow.down.circle.fill")
-                            .foregroundStyle(.secondary)
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
                             .font(.caption)
-                            .help("Descargado")
+                            .help("Descargado y listo")
                     }
                 }
                 Text(model.tagline)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if let metrics = model.metrics {
+                    MetricsStrip(metrics: metrics)
+                }
+
                 Text("\(model.languageSummary) · \(model.formattedDownloadSize) · \(model.license)")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
+
+                // La respuesta a haber hecho clic, en esta ventana.
+                //
+                // Antes elegir un modelo disparaba una descarga de cientos de
+                // megas y *nada* cambiaba acá: el único progreso vivía en la
+                // barra de menú, que es otra ventana. Quien no supiera mirar
+                // ahí no tenía forma de enterarse de que había pasado algo.
+                if let progress {
+                    PreparationStrip(progress: progress)
+                        .padding(.top, 2)
+                }
             }
 
             Spacer(minLength: 0)
@@ -383,6 +463,70 @@ private struct ModelRow: View {
         .contentShape(.rect)
         .onTapGesture(perform: select)
         .padding(.vertical, 2)
+    }
+}
+
+/// Los números medidos de un modelo, con la procedencia del dato a la vista.
+private struct MetricsStrip: View {
+    let metrics: ModelMetrics
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            if !metrics.facts.isEmpty {
+                HStack(spacing: 5) {
+                    ForEach(metrics.facts, id: \.label) { fact in
+                        HStack(spacing: 3) {
+                            Text(fact.label).foregroundStyle(.secondary)
+                            Text(fact.value).fontWeight(.medium).monospacedDigit()
+                        }
+                        .font(.caption)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 5))
+                    }
+                }
+                .help(metrics.provenance.note)
+            }
+
+            if let caveat = metrics.caveat {
+                // La advertencia se pinta distinto del resto a propósito: no es
+                // un número más, es el motivo por el que alguien debería *no*
+                // elegir este modelo aunque las otras cifras lo favorezcan.
+                Label(caveat, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if metrics.provenance == .published {
+                Text(metrics.provenance.note)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+}
+
+/// Qué está pasando mientras un modelo se prepara.
+private struct PreparationStrip: View {
+    let progress: PreparationProgress
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ProgressView(value: min(max(progress.fraction, 0), 1))
+                .progressViewStyle(.linear)
+                .controlSize(.small)
+
+            HStack(spacing: 4) {
+                Text(progress.summary)
+                if let detail = progress.detail {
+                    Text("·").foregroundStyle(.tertiary)
+                    Text(detail).monospacedDigit()
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
     }
 }
 

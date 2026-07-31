@@ -36,25 +36,52 @@ actor WhisperEngine: SpeechEngine {
 
     // MARK: - Preparación
 
-    func prepare(_ model: ASRModel, progress: @escaping @Sendable (Double) -> Void) async throws {
+    func prepare(
+        _ model: ASRModel, progress: @escaping @Sendable (PreparationProgress) -> Void
+    ) async throws {
         guard model.engine == .whisper else {
             throw SpeechEngineError.engineUnavailable("modelo \(model.id) no es de Whisper")
         }
         if loadedModel?.id == model.id, kit != nil {
-            progress(1)
+            progress(PreparationProgress(phase: .loading, fraction: 1))
             return
         }
 
-        if store.isIncomplete(model) {
-            logger.notice("descarga previa incompleta de \(model.id, privacy: .public); se descarta")
+        switch store.salvage(model) {
+        case .nothingToDo:
+            break
+        case .resume(let bytes):
+            let size = ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+            logger.notice("se reanuda \(model.id, privacy: .public) desde \(size, privacy: .public)")
+        case .discard(let reason):
+            logger.notice("se descarta \(model.id, privacy: .public): \(reason, privacy: .public)")
             try? store.remove(model)
         }
+
         if !store.isInstalled(model) {
             try store.checkDiskSpace(for: model)
             try await store.beginInstall(model)
         }
 
         let directory = store.directory(for: model)
+
+        // WhisperKit no ofrece ningún callback de progreso con esta
+        // configuración: descarga por dentro y devuelve cuando terminó. Antes
+        // eso significaba saltar de 0 a 1 y dejar a la persona mirando un
+        // porcentaje inmóvil durante los 632 MB.
+        //
+        // Como el medidor mide el disco y no depende de que nadie le avise, acá
+        // alcanza con muestrearlo desde afuera mientras WhisperKit trabaja. Es
+        // el único progreso posible para este motor, y es real.
+        let meter = DownloadMeter(directory: directory, expected: model.downloadBytes)
+        let sampler = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(700))
+                guard !Task.isCancelled else { return }
+                progress(meter.sample(phase: .downloading(file: 0, of: 0), fraction: 0))
+            }
+        }
+        defer { sampler.cancel() }
 
         do {
             let config = WhisperKitConfig(
@@ -67,10 +94,12 @@ actor WhisperEngine: SpeechEngine {
                 download: true
             )
             let kit = try await WhisperKit(config)
+            sampler.cancel()
+            progress(PreparationProgress(phase: .loading, fraction: 1))
+
             self.kit = kit
             self.loadedModel = model
             try store.completeInstall(model)
-            progress(1)
             logger.info("modelo \(model.id, privacy: .public) cargado")
         } catch {
             store.markFailed(model)

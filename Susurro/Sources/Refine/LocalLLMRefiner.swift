@@ -114,9 +114,9 @@ actor LocalLLMRefiner: TextRefiner {
         loadedModel = nil
     }
 
-    func prepare(progress: @escaping @Sendable (Double) -> Void) async throws {
+    func prepare(progress: @escaping @Sendable (PreparationProgress) -> Void) async throws {
         if loadedModel?.id == model.id, container != nil {
-            progress(1)
+            progress(PreparationProgress(phase: .loading, fraction: 1))
             return
         }
 
@@ -128,16 +128,31 @@ actor LocalLLMRefiner: TextRefiner {
         let cache = HubCache(cacheDirectory: modelsDirectory)
         let client = HubClient(cache: cache)
 
+        // El refinado es la descarga más pesada de la app —2,5 GB el recomendado,
+        // cinco veces Parakeet— y hasta ahora era completamente invisible: se
+        // llamaba con `{ _ in }` y no había una sola señal en la interfaz. La
+        // persona veía «Descargando Parakeet: 2 %» mientras bajaban de fondo
+        // cinco veces más megas de los que decía la pantalla.
+        let meter = DownloadMeter(
+            directory: modelsDirectory.appendingPathComponent(
+                model.cacheFolderName, isDirectory: true),
+            expected: model.downloadBytes)
+
         do {
             let container = try await loadModelContainer(
                 from: #hubDownloader(client),
                 using: #huggingFaceTokenizerLoader(),
                 configuration: ModelConfiguration(id: model.repository),
-                progressHandler: { p in progress(p.fractionCompleted) }
+                progressHandler: { p in
+                    progress(
+                        meter.sample(
+                            phase: .downloading(file: 0, of: 0),
+                            fraction: p.fractionCompleted))
+                }
             )
+            progress(PreparationProgress(phase: .loading, fraction: 1))
             self.container = container
             self.loadedModel = model
-            progress(1)
             logger.info("modelo de refinado \(self.model.id, privacy: .public) cargado")
 
             await warmUp(container)

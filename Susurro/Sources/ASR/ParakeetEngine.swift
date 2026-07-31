@@ -40,12 +40,14 @@ actor ParakeetEngine: SpeechEngine {
 
     // MARK: - Preparación
 
-    func prepare(_ model: ASRModel, progress: @escaping @Sendable (Double) -> Void) async throws {
+    func prepare(
+        _ model: ASRModel, progress: @escaping @Sendable (PreparationProgress) -> Void
+    ) async throws {
         guard model.engine == .parakeet else {
             throw SpeechEngineError.engineUnavailable("modelo \(model.id) no es de Parakeet")
         }
         if loadedModel?.id == model.id, manager != nil {
-            progress(1)
+            progress(PreparationProgress(phase: .loading, fraction: 1))
             return
         }
 
@@ -57,12 +59,23 @@ actor ParakeetEngine: SpeechEngine {
         let directory = store.directory(for: model)
             .appendingPathComponent(model.enclosingFolderName, isDirectory: true)
 
-        // El manifiesto propio es la defensa contra el issue #819: si la
-        // descarga anterior quedó a medias, el directorio existe pero el
-        // manifiesto no cierra, y hay que empezar de cero en vez de intentar
-        // cargar algo incompleto para siempre.
-        if store.isIncomplete(model) {
-            logger.notice("descarga previa incompleta de \(model.id, privacy: .public); se descarta")
+        // El manifiesto propio es la defensa contra el issue #819: FluidAudio da
+        // por instalado cualquier directorio que exista, así que sin esto una
+        // descarga cortada se cargaría rota para siempre.
+        //
+        // Lo que ya no se hace es borrar en cuanto algo esté a medias. Ver
+        // `ModelStore.Salvage`: FluidAudio reanuda por rango con ETag y valida
+        // el tamaño final contra el que declara Hugging Face, así que conservar
+        // los bytes de una interrupción limpia es seguro y ahorra volver a bajar
+        // cientos de megas.
+        switch store.salvage(model) {
+        case .nothingToDo:
+            break
+        case .resume(let bytes):
+            let size = ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+            logger.notice("se reanuda \(model.id, privacy: .public) desde \(size, privacy: .public)")
+        case .discard(let reason):
+            logger.notice("se descarta \(model.id, privacy: .public): \(reason, privacy: .public)")
             try? store.remove(model)
         }
 
@@ -71,15 +84,27 @@ actor ParakeetEngine: SpeechEngine {
             try await store.beginInstall(model)
         }
 
+        // El medidor mira el directorio en vez de derivar los bytes de la
+        // fracción: ver `DownloadMeter`.
+        let meter = DownloadMeter(directory: store.directory(for: model), expected: model.downloadBytes)
+
         do {
             let models = try await AsrModels.downloadAndLoad(
                 to: directory,
                 version: version,
                 encoderPrecision: precision,
                 progressHandler: { downloadProgress in
-                    progress(downloadProgress.fractionCompleted)
+                    progress(
+                        meter.sample(
+                            phase: Self.translate(downloadProgress.phase),
+                            fraction: downloadProgress.fractionCompleted))
                 }
             )
+
+            // Cargar en memoria lo ya compilado tarda lo suyo y no emite avance.
+            // Anunciarlo evita el último tramo de silencio, que es justo cuando
+            // la persona ya está esperando hace rato.
+            progress(PreparationProgress(phase: .loading, fraction: 1))
 
             let manager = AsrManager(config: .default)
             try await manager.loadModels(models)
@@ -87,7 +112,6 @@ actor ParakeetEngine: SpeechEngine {
             self.manager = manager
             self.loadedModel = model
             try store.completeInstall(model)
-            progress(1)
 
             logger.info("modelo \(model.id, privacy: .public) cargado")
         } catch {
@@ -190,6 +214,26 @@ actor ParakeetEngine: SpeechEngine {
 
     private static func precision(for model: ASRModel) -> ParakeetEncoderPrecision {
         model.variant.hasSuffix("int4") ? .int4 : .int8
+    }
+
+    /// Fase de FluidAudio traducida a la propia, como todo lo que cruza el borde
+    /// de un SDK.
+    ///
+    /// La que importa es `.compiling`. FluidAudio reparte la fracción mitad y
+    /// mitad entre descargar y compilar, así que del 50 % al 100 % la operación
+    /// no toca la red: compila para el Neural Engine. Antes esta fase se
+    /// descartaba y la app decía «Descargando» todo el tiempo, incluida la mitad
+    /// en la que el número no se mueve porque la compilación solo avisa al
+    /// terminar cada modelo.
+    private static func translate(_ phase: DownloadPhase) -> PreparationProgress.Phase {
+        switch phase {
+        case .listing:
+            return .listing
+        case .downloading(let completed, let total):
+            return .downloading(file: completed, of: total)
+        case .compiling(let name):
+            return .compiling(model: name)
+        }
     }
 
     /// La pista de idioma solo la usa v3 (filtra los tokens candidatos por

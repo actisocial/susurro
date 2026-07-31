@@ -76,17 +76,60 @@ struct ModelStore: Sendable {
         return manifest.state == .complete && fileManager.fileExists(atPath: directory(for: model).path)
     }
 
-    /// Hay archivos pero la instalación nunca terminó. Hay que borrar y rehacer.
-    func isIncomplete(_ model: ASRModel) -> Bool {
+    /// Qué hacer con lo que haya quedado en disco de un intento anterior.
+    ///
+    /// Antes esto era una sola pregunta —«¿está incompleto?»— y toda respuesta
+    /// afirmativa terminaba en borrar el directorio. Era demasiado grueso, y
+    /// caro: una descarga cortada al 90 % de 483 MB costaba los 483 MB de nuevo,
+    /// y con una conexión inestable la cosa no converge nunca.
+    ///
+    /// Lo que lo vuelve innecesario es que **FluidAudio ya resuelve la
+    /// corrupción, y mejor**. Reanuda por rango de bytes validando con el ETag
+    /// fuerte del servidor vía `If-Range`; cuando el validador es débil se niega
+    /// a reanudar y empieza de cero por su cuenta (RFC 9110 §13.1.5); revalida
+    /// los `.partial` que quedaron de corridas anteriores; y antes de mover un
+    /// archivo a su lugar definitivo compara su tamaño contra el que declara
+    /// Hugging Face, así que una cola cortada se detecta como truncamiento. Un
+    /// archivo que llegó a destino ya pasó por todo eso.
+    ///
+    /// Entonces borrar no agrega ninguna garantía: la protección contra *cargar*
+    /// un modelo a medias es el manifiesto, que sigue igual. Lo único que
+    /// agregaba era el costo. Pero sí hay dos casos donde conservar es
+    /// imprudente, y son los que quedan.
+    enum Salvage: Equatable {
+        /// No hay nada que rescatar, o ya está completo.
+        case nothingToDo
+        /// Quedó a medias por una interrupción limpia. Conservar y reanudar.
+        case resume(bytes: Int64)
+        /// Borrar antes de seguir.
+        case discard(reason: String)
+    }
+
+    func salvage(_ model: ASRModel) -> Salvage {
         let dir = directory(for: model)
-        guard fileManager.fileExists(atPath: dir.path) else { return false }
+        guard fileManager.fileExists(atPath: dir.path) else { return .nothingToDo }
+
         guard let manifest = readManifest(for: model) else {
-            // Directorio sin manifiesto: o quedó de una descarga interrumpida, o
-            // lo dejó una versión anterior de la app. En los dos casos, lo
-            // seguro es rehacerlo.
-            return true
+            // Sin manifiesto no se sabe quién dejó estos archivos: puede ser una
+            // versión anterior de la app, con otro formato. Procedencia
+            // desconocida es el único caso donde empezar de cero es lo barato.
+            return .discard(reason: "sin manifiesto")
         }
-        return manifest.state != .complete
+
+        switch manifest.state {
+        case .complete:
+            return .nothingToDo
+
+        case .installing:
+            // Interrupción limpia: la app se cerró, la mataron, se cortó la luz.
+            // Los bytes son los que escribió FluidAudio y él sabe validarlos.
+            return .resume(bytes: diskUsage(of: model))
+
+        case .failed:
+            // Acá sí hubo un error de verdad en el intento anterior y no se sabe
+            // qué estado dejó. Es el caso que justifica el borrado.
+            return .discard(reason: "el intento anterior falló")
+        }
     }
 
     func beginInstall(_ model: ASRModel) async throws {

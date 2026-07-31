@@ -40,6 +40,20 @@ struct ASRModel: Identifiable, Codable, Sendable, Hashable {
     /// Versión mínima de macOS.
     let minimumMacOS: Int
 
+    /// Qué se sabe de su precisión, y de dónde salió ese dato.
+    ///
+    /// Acá la procedencia es siempre `.published`, y es importante que se vea.
+    /// El banco que trae la app mide la *limpieza* del texto: arranca de
+    /// transcripciones correctas escritas a mano y evalúa qué les hace el
+    /// modelo de refinado. O sea que **nunca midió el reconocimiento**. Estas
+    /// cifras son las que publica quien entrenó cada modelo, sobre sus propios
+    /// conjuntos de prueba, y no están verificadas en esta Mac ni con esta voz.
+    ///
+    /// Se muestran igual porque son mejor que nada para elegir, pero etiquetadas
+    /// como lo que son. `nil` donde no hay una cifra atribuible: inventar un
+    /// número plausible sería peor que dejar el hueco.
+    let metrics: ModelMetrics?
+
     var isAvailableOnThisMac: Bool {
         ProcessInfo.processInfo.isOperatingSystemAtLeast(
             OperatingSystemVersion(majorVersion: minimumMacOS, minorVersion: 0, patchVersion: 0))
@@ -99,7 +113,13 @@ enum ModelCatalog {
         license: "CC-BY-4.0",
         attribution: "NVIDIA — nvidia/parakeet-tdt-0.6b-v3",
         sourceRepository: "FluidInference/parakeet-tdt-0.6b-v3-coreml",
-        minimumMacOS: 14
+        minimumMacOS: 14,
+        metrics: ModelMetrics(
+            facts: [
+                .init(label: String(localized: "Error en español"), value: "3,45 %"),
+                .init(label: String(localized: "Dónde corre"), value: String(localized: "Neural Engine")),
+            ],
+            provenance: .published)
     )
 
     static let parakeetV3Int4 = ASRModel(
@@ -114,7 +134,11 @@ enum ModelCatalog {
         license: "CC-BY-4.0",
         attribution: "NVIDIA — nvidia/parakeet-tdt-0.6b-v3",
         sourceRepository: "FluidInference/parakeet-tdt-0.6b-v3-coreml",
-        minimumMacOS: 14
+        minimumMacOS: 14,
+        // Sin cifras: es el mismo modelo comprimido más fuerte, y cuánta
+        // precisión pierde exactamente no está publicado en ningún lado que se
+        // pueda citar. Poner un número plausible sería inventarlo.
+        metrics: nil
     )
 
     static let parakeetEnglishFast = ASRModel(
@@ -129,7 +153,13 @@ enum ModelCatalog {
         license: "CC-BY-4.0",
         attribution: "NVIDIA — nvidia/parakeet-tdt_ctc-110m",
         sourceRepository: "FluidInference/parakeet-tdt-ctc-110m-coreml",
-        minimumMacOS: 14
+        minimumMacOS: 14,
+        metrics: ModelMetrics(
+            facts: [
+                .init(label: String(localized: "Dónde corre"), value: String(localized: "Neural Engine")),
+            ],
+            caveat: String(localized: "No entiende español. Si dictás una frase en español, el resultado va a ser inservible."),
+            provenance: .published)
     )
 
     static let whisperLargeV3Turbo = ASRModel(
@@ -144,7 +174,14 @@ enum ModelCatalog {
         license: "MIT",
         attribution: "OpenAI — openai/whisper-large-v3-turbo",
         sourceRepository: "argmaxinc/whisperkit-coreml",
-        minimumMacOS: 14
+        minimumMacOS: 14,
+        metrics: ModelMetrics(
+            facts: [
+                .init(label: String(localized: "Error en español"), value: "~4,7 %"),
+                .init(label: String(localized: "Dónde corre"), value: "GPU"),
+            ],
+            caveat: String(localized: "Sobre silencio o ruido tiende a inventar texto que nadie dijo. Conviene solo para idiomas que Parakeet no cubre."),
+            provenance: .published)
     )
 
     static let appleSpeech = ASRModel(
@@ -159,7 +196,9 @@ enum ModelCatalog {
         license: String(localized: "Propietario de Apple"),
         attribution: nil,
         sourceRepository: nil,
-        minimumMacOS: 26
+        minimumMacOS: 26,
+        // Apple no publica cifras de precisión de su motor de dictado.
+        metrics: nil
     )
 
     /// Todos los modelos, en el orden en que se muestran.

@@ -113,11 +113,11 @@ enum SelfTest {
 
         let loadStart = Date()
         do {
-            try await engine.prepare(model) { fraction in
-                if fraction < 1 {
-                    print("\r  descargando… \(Int(fraction * 100))%", terminator: "")
-                    fflush(stdout)
-                }
+            try await engine.prepare(model) { progress in
+                guard progress.fraction < 1 else { return }
+                let detail = progress.detail.map { " · \($0)" } ?? ""
+                print("\r  \(progress.summary)\(detail)          ", terminator: "")
+                fflush(stdout)
             }
         } catch {
             print("\n✗ no se pudo preparar el modelo: \(error.localizedDescription)")
@@ -131,11 +131,11 @@ enum SelfTest {
             let candidate = LocalLLMRefiner(
                 model: preferences.refinementModel, modelsDirectory: store.rootDirectory)
             do {
-                try await candidate.prepare { fraction in
-                    if fraction < 1 {
-                        print("\r  descargando el modelo de refinado… \(Int(fraction * 100))%", terminator: "")
-                        fflush(stdout)
-                    }
+                try await candidate.prepare { progress in
+                    guard progress.fraction < 1 else { return }
+                    let detail = progress.detail.map { " · \($0)" } ?? ""
+                    print("\r  refinado: \(progress.summary)\(detail)          ", terminator: "")
+                    fflush(stdout)
                 }
                 refiner = candidate
                 print("\r✓ refinador listo en \(ms(since: start))")

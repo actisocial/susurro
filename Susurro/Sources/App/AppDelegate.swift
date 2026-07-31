@@ -116,6 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let view = OnboardingView(
             controller: controller,
             preferences: preferences,
+            openSettings: { [weak self] in self?.showSettings() },
             finish: { [weak self] in
                 self?.preferences.hasCompletedOnboarding = true
                 self?.onboardingWindow?.close()
