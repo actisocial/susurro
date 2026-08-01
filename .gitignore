@@ -25,3 +25,7 @@ Models/
 *.mlmodelc
 *.gguf
 *.safetensors
+
+# Claude Code: la config del proyecto se versiona, la personal no
+.claude/settings.local.json
+CLAUDE.local.md

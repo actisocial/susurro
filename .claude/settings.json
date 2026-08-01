@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(make build)",
+      "Bash(make build:*)",
+      "Bash(make test)",
+      "Bash(make project)",
+      "Bash(make strings)",
+      "Bash(make help)",
+      "Bash(make models-dir)",
+      "Bash(make stop)",
+      "Bash(xcodebuild:*)",
+      "Bash(xcodegen:*)",
+      "Bash(swift build:*)",
+      "Bash(swift test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh release list:*)",
+      "Bash(gh release view:*)"
+    ],
+    "deny": [
+      "Read(./*.p12)",
+      "Read(./*.pem)",
+      "Read(./*.key)",
+      "Read(.env)",
+      "Read(.env.*)"
+    ]
+  }
+}
