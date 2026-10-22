@@ -115,18 +115,9 @@ actor WhisperEngine: SpeechEngine {
         let started = Date()
         let audioDuration = Double(samples.count) / AudioCapture.targetSampleRate
 
-        var options = DecodingOptions()
-        options.language = language.whisperCode
-        // Sin muestreo aleatorio: para dictado queremos la transcripción más
-        // probable, no una variación.
-        options.temperature = 0
-        options.usePrefillPrompt = true
-        // Whisper sabe emitir marcas de tiempo pero acá no se usan y cuestan
-        // tokens de decodificación.
-        options.withoutTimestamps = true
-
         do {
-            let results = try await kit.transcribe(audioArray: samples, decodeOptions: options)
+            let results = try await kit.transcribe(
+                audioArray: samples, decodeOptions: Self.options(for: language))
             let text = results
                 .map(\.text)
                 .joined(separator: " ")
@@ -140,6 +131,24 @@ actor WhisperEngine: SpeechEngine {
         } catch {
             throw SpeechEngineError.transcriptionFailed(error.localizedDescription)
         }
+    }
+
+    static func options(for language: LanguageHint) -> DecodingOptions {
+        var options = DecodingOptions()
+        options.language = language.whisperCode
+        // Sin idioma, WhisperKit *no* detecta: con el prompt inicial activado
+        // la detección viene apagada y el prompt se arma con `<|en|>`. Whisper
+        // recibía la orden de transcribir en inglés un audio en español, y lo
+        // traducía. Pasaba con «Automático», que es el valor por defecto.
+        options.detectLanguage = options.language == nil
+        // Sin muestreo aleatorio: para dictado queremos la transcripción más
+        // probable, no una variación.
+        options.temperature = 0
+        options.usePrefillPrompt = true
+        // Whisper sabe emitir marcas de tiempo pero acá no se usan y cuestan
+        // tokens de decodificación.
+        options.withoutTimestamps = true
+        return options
     }
 
     func unload() async {
@@ -174,7 +183,7 @@ actor WhisperEngine: SpeechEngine {
 }
 
 private extension LanguageHint {
-    /// Código ISO que espera Whisper. `nil` deja que detecte solo.
+    /// Código ISO que espera Whisper. `nil` es «detectá vos».
     var whisperCode: String? {
         switch self {
         case .automatic: return nil
