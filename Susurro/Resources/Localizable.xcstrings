@@ -555,6 +555,16 @@
         }
       }
     },
+    "El más rápido. En frases largas que mezclan español e inglés a veces escribe todo en inglés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The fastest. On long sentences mixing Spanish and English it sometimes writes everything in English."
+          }
+        }
+      }
+    },
     "El más rápido: el texto aparece casi al instante. Saca las muletillas bien, pero puntúa la mitad.": {},
     "El recomendado. El que mejor puntúa cuando mezclás español e inglés, y nunca se atrasa.": {},
     "El recomendado. Es el que limpia bien el español sin desviarse a responderte.": {
@@ -563,6 +573,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "The recommended one. It cleans Spanish properly without drifting into answering you."
+          }
+        }
+      }
+    },
+    "El recomendado: con el idioma fijado no se pasa al inglés aunque mezcles términos. Más lento que Parakeet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recommended: with the language set it won't switch to English even if you mix in English terms. Slower than Parakeet."
           }
         }
       }
@@ -1284,6 +1304,7 @@
       }
     },
     "Sobre silencio o ruido tiende a inventar texto que nadie dijo. Conviene solo para idiomas que Parakeet no cubre.": {},
+    "Sobre silencio o ruido tiende a inventar texto que nadie dijo; el recorte por VAD lo mitiga.": {},
     "Solo inglés": {
       "localizations": {
         "en": {
@@ -1412,6 +1433,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transcription cancelled."
+          }
+        }
+      }
+    },
+    "Whisper es el recomendado porque, con el idioma en Español, no traduce al inglés las frases que mezclan términos en inglés. Parakeet es más rápido, pero no se le puede fijar el idioma.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whisper is recommended because, with the language set to Spanish, it doesn't translate sentences with English terms into English. Parakeet is faster, but its language can't be fixed."
           }
         }
       }

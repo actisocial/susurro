@@ -9,8 +9,8 @@
 Dictado por voz para macOS. Vive en la barra de menús, no tiene ventana
 principal y no manda nada a ningún lado.
 
-Mantenés una tecla, hablás, la soltás, y el texto aparece donde tenías el
-cursor. Dos toques rápidos dejan el dictado enganchado para las manos libres.
+Mantenés una tecla (⌘. por defecto), hablás, la soltás, y el texto aparece
+donde tenías el cursor. Dos toques rápidos dejan el dictado enganchado para las manos libres.
 Esc cancela.
 
 Todo el reconocimiento y toda la limpieza del texto ocurren en tu Mac, con
@@ -118,17 +118,17 @@ Se eligen en Ajustes › Modelos. Se descargan a
 
 | Modelo | Tamaño | Idiomas | Para qué |
 |---|---|---|---|
-| Parakeet TDT v3 | 483 MB | 25 europeos | El recomendado |
+| Parakeet TDT v3 | 483 MB | 25 europeos | El más rápido multilingüe |
 | Parakeet TDT v3 compacto | 336 MB | 25 europeos | Menos disco |
 | Parakeet 110M | 120 MB | inglés | El más rápido |
-| Whisper large-v3 turbo | 632 MB | ~100 | Idiomas que Parakeet no cubre |
+| Whisper large-v3 turbo | 632 MB | ~100 | El recomendado, con idioma fijo |
 | Dictado del sistema | 0 MB | 30 | Sin descarga (macOS 26+) |
 
-Parakeet es el default y no Whisper, aunque Whisper sea el nombre conocido: en
-español mide alrededor de 3,45 % de WER contra ~4,7 % de Whisper large-v3-turbo,
-y corre unas cinco veces más rápido porque va sobre el Neural Engine en vez de
-la GPU. Es mejor *y* más rápido en los dos idiomas que le importan a esta app.
-Whisper está para los idiomas que Parakeet no cubre.
+Whisper viene por defecto, con el idioma en Español. Parakeet mide mejor en
+español (3,45 % de WER contra ~4,7 %) y corre unas cinco veces más rápido, pero
+no se le puede fijar el idioma: en frases largas que mezclan español con
+términos en inglés a veces devuelve todo en inglés. Whisper con el idioma fijo
+no lo hace, y deja los términos en inglés como los dijiste.
 
 **Limpieza del texto**
 

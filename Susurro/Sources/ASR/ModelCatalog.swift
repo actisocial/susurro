@@ -3,11 +3,11 @@ import Foundation
 /// Familia de motor que sabe correr un modelo dado.
 enum EngineKind: String, Codable, Sendable, CaseIterable {
     /// Parakeet TDT de NVIDIA, convertido a CoreML, corriendo en el Neural
-    /// Engine. Es el camino por defecto: el más rápido y el que menos batería
-    /// gasta, y además deja la GPU libre para el LLM de refinado.
+    /// Engine. El más rápido y el que menos batería gasta, y además deja la GPU
+    /// libre para el LLM de refinado.
     case parakeet
-    /// Whisper de OpenAI vía WhisperKit. Más lento, pero cubre ~75 idiomas que
-    /// Parakeet no toca.
+    /// Whisper de OpenAI vía WhisperKit. Más lento, pero se le puede fijar el
+    /// idioma. Es el de fábrica.
     case whisper
     /// El motor de dictado del propio sistema (macOS 26+). Cero descarga.
     case apple
@@ -94,11 +94,11 @@ struct ASRModel: Identifiable, Codable, Sendable, Hashable {
 /// cuál elegir. Cuatro opciones bien diferenciadas cubren todos los casos
 /// reales sin obligar a nadie a investigar.
 ///
-/// Por qué Parakeet v3 es el default y no Whisper, que es el nombre conocido:
-/// en español mide 3,45 % de WER contra ~4,7 % de Whisper large-v3-turbo, y
-/// corre unas cinco veces más rápido porque va sobre el Neural Engine en vez de
-/// la GPU. Es mejor y más rápido en los dos idiomas que importan acá. Whisper
-/// queda como opción para los idiomas que Parakeet no cubre.
+/// Por qué Whisper es el de fábrica aunque Parakeet mida mejor (3,45 % de WER
+/// en español contra ~4,7 %) y corra unas cinco veces más rápido: en el uso
+/// real se dicta en español con términos en inglés, y con frases largas
+/// Parakeet a veces devuelve todo en inglés. A Whisper se le fija el idioma y
+/// eso no pasa. El WER publicado no mide esa mezcla.
 enum ModelCatalog {
 
     static let parakeetV3Int8 = ASRModel(
@@ -109,7 +109,7 @@ enum ModelCatalog {
         downloadBytes: 483 * 1_000_000,
         residentBytes: 140 * 1_000_000,
         languageSummary: String(localized: "25 idiomas europeos, incluido español"),
-        tagline: String(localized: "El equilibrio recomendado: rápido, preciso y multilingüe."),
+        tagline: String(localized: "El más rápido. En frases largas que mezclan español e inglés a veces escribe todo en inglés."),
         license: "CC-BY-4.0",
         attribution: "NVIDIA — nvidia/parakeet-tdt-0.6b-v3",
         sourceRepository: "FluidInference/parakeet-tdt-0.6b-v3-coreml",
@@ -170,7 +170,7 @@ enum ModelCatalog {
         downloadBytes: 632 * 1_000_000,
         residentBytes: 900 * 1_000_000,
         languageSummary: String(localized: "Cerca de 100 idiomas"),
-        tagline: String(localized: "Para idiomas que Parakeet no cubre. Más lento y puede inventar texto sobre silencio."),
+        tagline: String(localized: "El recomendado: con el idioma fijado no se pasa al inglés aunque mezcles términos. Más lento que Parakeet."),
         license: "MIT",
         attribution: "OpenAI — openai/whisper-large-v3-turbo",
         sourceRepository: "argmaxinc/whisperkit-coreml",
@@ -180,7 +180,7 @@ enum ModelCatalog {
                 .init(label: String(localized: "Error en español"), value: "~4,7 %"),
                 .init(label: String(localized: "Dónde corre"), value: "GPU"),
             ],
-            caveat: String(localized: "Sobre silencio o ruido tiende a inventar texto que nadie dijo. Conviene solo para idiomas que Parakeet no cubre."),
+            caveat: String(localized: "Sobre silencio o ruido tiende a inventar texto que nadie dijo; el recorte por VAD lo mitiga."),
             provenance: .published)
     )
 
@@ -214,8 +214,6 @@ enum ModelCatalog {
     static var available: [ASRModel] {
         all.filter(\.isAvailableOnThisMac)
     }
-
-    static let `default` = parakeetV3Int8
 
     static func model(id: String) -> ASRModel? {
         all.first { $0.id == id }

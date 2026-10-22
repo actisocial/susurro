@@ -340,7 +340,7 @@ private struct ModelSettings: View {
             } header: {
                 Text("Reconocimiento de voz")
             } footer: {
-                Text("Parakeet corre en el Neural Engine: es más rápido que Whisper y más preciso en español, y deja la GPU libre para el refinado. Whisper está para los idiomas que Parakeet no cubre.")
+                Text("Whisper es el recomendado porque, con el idioma en Español, no traduce al inglés las frases que mezclan términos en inglés. Parakeet es más rápido, pero no se le puede fijar el idioma.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
