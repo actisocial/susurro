@@ -74,7 +74,7 @@
   "Para idiomas que Parakeet no cubre. Más lento y puede inventar texto sobre silencio.": "For languages Parakeet doesn't cover. Slower, and it can invent text over silence.",
   "Parakeet 110M (solo inglés)": "Parakeet 110M (English only)",
   "Parakeet TDT v3 (compacto)": "Parakeet TDT v3 (compact)",
-  "Parakeet corre en el Neural Engine: es más rápido que Whisper y más preciso en español. Whisper está para los idiomas que Parakeet no cubre.": "Parakeet runs on the Neural Engine: faster than Whisper and more accurate in Spanish. Whisper is there for the languages Parakeet doesn't cover.",
+  "Parakeet corre en el Neural Engine: es más rápido que Whisper y más preciso en español, y deja la GPU libre para el refinado. Whisper está para los idiomas que Parakeet no cubre.": "Parakeet runs on the Neural Engine: faster than Whisper, more accurate in Spanish, and it leaves the GPU free for cleanup. Whisper is there for the languages Parakeet doesn't cover.",
   "Permisos": "Permissions",
   "Podés comprobarlo: desconectá el wifi después de bajar el modelo y seguí dictando.": "You can verify it: turn off Wi-Fi after downloading the model and keep dictating.",
   "Propietario de Apple": "Apple proprietary",

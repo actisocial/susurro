@@ -652,6 +652,7 @@
         }
       }
     },
+    "Estos son los que mejor midieron en las pruebas. No hace falta que decidas nada ahora.": {},
     "Falló la transcripción: %@": {
       "localizations": {
         "en": {
@@ -879,6 +880,7 @@
         }
       }
     },
+    "Medido en esta Mac sobre 46 dictados de prueba.": {},
     "Micrófono": {
       "localizations": {
         "en": {
@@ -1070,6 +1072,7 @@
         }
       }
     },
+    "Para puntuar y sacar muletillas": {},
     "Parakeet 110M (solo inglés)": {
       "localizations": {
         "en": {
@@ -1100,16 +1103,7 @@
         }
       }
     },
-    "Parakeet corre en el Neural Engine: es más rápido que Whisper y más preciso en español. Whisper está para los idiomas que Parakeet no cubre.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Parakeet runs on the Neural Engine: faster than Whisper and more accurate in Spanish. Whisper is there for the languages Parakeet doesn't cover."
-          }
-        }
-      }
-    },
+    "Parakeet corre en el Neural Engine: es más rápido que Whisper y más preciso en español. Whisper está para los idiomas que Parakeet no cubre.": {},
     "Permisos": {
       "localizations": {
         "en": {
@@ -1131,6 +1125,7 @@
       }
     },
     "Prefiero elegirlo yo": {},
+    "Prefiero elegirlos yo": {},
     "Preparando el modelo… %lld%%": {
       "localizations": {
         "en": {
@@ -1163,6 +1158,7 @@
     },
     "Puntuación": {},
     "Qwen3 — Alibaba Cloud": {},
+    "Recomendado": {},
     "Reconocimiento de voz": {
       "localizations": {
         "en": {
@@ -1218,6 +1214,7 @@
       }
     },
     "Se descarga ahora, una sola vez: %@.": {},
+    "Se descargan ahora, una sola vez: %@. Podés dictar apenas termine el primero.": {},
     "Se desconectó el micrófono durante el dictado.": {
       "localizations": {
         "en": {

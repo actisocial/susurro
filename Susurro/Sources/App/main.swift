@@ -11,6 +11,12 @@ if SelfTest.shouldRun() {
     exit(status)
 }
 
+// Banco de pruebas: mide la calidad de la limpieza sobre un corpus fijo.
+if Benchmark.shouldRun() {
+    let status = await Benchmark.run()
+    exit(status)
+}
+
 // Bajo XCTest la app es solo el contenedor del bundle de tests, y no tiene que
 // arrancar como app.
 //

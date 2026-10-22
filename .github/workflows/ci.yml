@@ -44,6 +44,13 @@ jobs:
       - name: Instalar XcodeGen
         run: brew install xcodegen
 
+      - name: Toolchain de Metal
+        run: |
+          # Lo necesita MLX para compilar sus shaders. Ver release.yml.
+          if ! xcrun -f metal >/dev/null 2>&1; then
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+
       - name: Compilar
         run: |
           xcodegen generate --quiet

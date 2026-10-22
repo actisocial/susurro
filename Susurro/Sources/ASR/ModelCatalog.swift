@@ -4,7 +4,7 @@ import Foundation
 enum EngineKind: String, Codable, Sendable, CaseIterable {
     /// Parakeet TDT de NVIDIA, convertido a CoreML, corriendo en el Neural
     /// Engine. Es el camino por defecto: el más rápido y el que menos batería
-    /// gasta.
+    /// gasta, y además deja la GPU libre para el LLM de refinado.
     case parakeet
     /// Whisper de OpenAI vía WhisperKit. Más lento, pero cubre ~75 idiomas que
     /// Parakeet no toca.
@@ -43,8 +43,10 @@ struct ASRModel: Identifiable, Codable, Sendable, Hashable {
     /// Qué se sabe de su precisión, y de dónde salió ese dato.
     ///
     /// Acá la procedencia es siempre `.published`, y es importante que se vea.
-    /// La app no trae ningún banco de reconocimiento: no hay audio en el repo.
-    /// Estas cifras son las que publica quien entrenó cada modelo, sobre sus propios
+    /// El banco que trae la app mide la *limpieza* del texto: arranca de
+    /// transcripciones correctas escritas a mano y evalúa qué les hace el
+    /// modelo de refinado. O sea que **nunca midió el reconocimiento**. Estas
+    /// cifras son las que publica quien entrenó cada modelo, sobre sus propios
     /// conjuntos de prueba, y no están verificadas en esta Mac ni con esta voz.
     ///
     /// Se muestran igual porque son mejor que nada para elegir, pero etiquetadas

@@ -130,7 +130,7 @@ final class StatusItemController: NSObject {
                 ? String(localized: "Escuchando (manos libres). Apretá otra vez para terminar.")
                 : String(localized: "Escuchando… Soltá para transcribir.")
 
-        case .transcribing:
+        case .transcribing, .refining:
             startAnimating()
             button.toolTip = String(localized: "Transcribiendo…")
 
@@ -260,6 +260,18 @@ final class StatusItemController: NSObject {
             items.append(message)
         default:
             items.append(String(localized: "Modelo: \(preferences.asrModel.displayName)"))
+            if preferences.refinementMode != .off {
+                items.append(String(localized: "Refinado: \(preferences.refinementMode.label)"))
+            }
+        }
+
+        // La descarga del refinador va aparte y puede seguir después de que el
+        // dictado ya funciona, así que se muestra en cualquier estado. Antes no
+        // se mostraba nunca: eran 2,5 GB invisibles, cinco veces lo que decía la
+        // línea de arriba.
+        if let refinement = controller.refinementProgress {
+            items.append(contentsOf: Self.lines(
+                for: refinement, model: preferences.refinementModel.displayName))
         }
 
         // Los permisos se avisan acá y no solo en Ajustes.
