@@ -71,6 +71,8 @@
   "No se pudo pegar en esta app. El texto quedó en el portapapeles: pegalo con ⌘V.": "Couldn't paste into this app. The text is on the clipboard — paste it with ⌘V.",
   "Ojo: en el teclado estadounidense, Opción es la tecla de acentos (⌥+e da «é»). Susurro se hace a un lado al detectar la segunda tecla, pero si escribís mucho en español conviene otra.": "Heads up: on the US keyboard layout, Option is the accent key (⌥+e gives \"é\"). Susurro steps aside as soon as it sees the second key, but if you write a lot in Spanish, pick another one.",
   "Opción derecha (⌥)": "Right Option (⌥)",
+  "Comando + punto (⌘.)": "Command + period (⌘.)",
+  "Mientras Susurro esté abierto, ⌘. deja de llegar a las demás apps, que lo usan para cancelar (y Terminal para interrumpir).": "While Susurro is open, ⌘. no longer reaches other apps, which use it to cancel (and Terminal to interrupt).",
   "Para idiomas que Parakeet no cubre. Más lento y puede inventar texto sobre silencio.": "For languages Parakeet doesn't cover. Slower, and it can invent text over silence.",
   "Parakeet 110M (solo inglés)": "Parakeet 110M (English only)",
   "Parakeet TDT v3 (compacto)": "Parakeet TDT v3 (compact)",

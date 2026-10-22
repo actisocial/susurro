@@ -322,6 +322,16 @@
         }
       }
     },
+    "Comando + punto (⌘.)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Command + period (⌘.)"
+          }
+        }
+      }
+    },
     "Comando derecho (⌘)": {
       "localizations": {
         "en": {
@@ -601,7 +611,6 @@
     "Entrada en uso": {},
     "Error en español": {},
     "Es el que mejor limpia cuando contesta, pero en dictados largos con los dos idiomas entreverados no llega a tiempo y ahí el texto sale sin tocar. Además pide 5,6 GB de memoria.": {},
-    "Es el que mejor midió en las pruebas. No hace falta que decidas nada ahora.": {},
     "Es para escuchar lo que dictás. El audio se procesa acá mismo y se descarta apenas se transcribe: no se guarda ni se envía a ningún lado.": {
       "localizations": {
         "en": {
@@ -901,6 +910,16 @@
         }
       }
     },
+    "Mientras Susurro esté abierto, ⌘. deja de llegar a las demás apps, que lo usan para cancelar (y Terminal para interrumpir).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While Susurro is open, ⌘. no longer reaches other apps, which use it to cancel (and Terminal to interrupt)."
+          }
+        }
+      }
+    },
     "Modelo de refinado": {
       "localizations": {
         "en": {
@@ -1103,7 +1122,6 @@
         }
       }
     },
-    "Parakeet corre en el Neural Engine: es más rápido que Whisper y más preciso en español. Whisper está para los idiomas que Parakeet no cubre.": {},
     "Permisos": {
       "localizations": {
         "en": {
@@ -1124,7 +1142,6 @@
         }
       }
     },
-    "Prefiero elegirlo yo": {},
     "Prefiero elegirlos yo": {},
     "Preparando el modelo… %lld%%": {
       "localizations": {
@@ -1213,7 +1230,6 @@
         }
       }
     },
-    "Se descarga ahora, una sola vez: %@.": {},
     "Se descargan ahora, una sola vez: %@. Podés dictar apenas termine el primero.": {},
     "Se desconectó el micrófono durante el dictado.": {
       "localizations": {

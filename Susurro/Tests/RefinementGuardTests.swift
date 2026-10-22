@@ -125,9 +125,10 @@ struct PreferencesTests {
     @Test("los valores por defecto son los esperados")
     func defaults() {
         let prefs = Preferences(defaults: makeDefaults("defaults"))
-        #expect(prefs.trigger == .rightCommand)
+        #expect(prefs.trigger == .commandPeriod)
+        #expect(prefs.asrModel == ModelCatalog.whisperLargeV3Turbo)
         #expect(prefs.refinementMode == .light)
-        #expect(prefs.language == .automatic)
+        #expect(prefs.language == .spanish)
         #expect(prefs.keepsMicrophoneWarm == false)
         #expect(prefs.hasCompletedOnboarding == false)
     }

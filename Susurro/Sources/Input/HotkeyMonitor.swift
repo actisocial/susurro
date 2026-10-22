@@ -11,6 +11,7 @@ import OSLog
 /// pueden mantener presionados sin efectos colaterales en ninguna app. Ese es
 /// justamente el requisito de un push-to-talk.
 enum DictationTrigger: String, CaseIterable, Codable, Sendable {
+    case commandPeriod
     case rightOption
     case rightCommand
     case rightControl
@@ -19,6 +20,7 @@ enum DictationTrigger: String, CaseIterable, Codable, Sendable {
 
     var label: String {
         switch self {
+        case .commandPeriod: return String(localized: "Comando + punto (⌘.)")
         case .rightOption:  return String(localized: "Opción derecha (⌥)")
         case .rightCommand: return String(localized: "Comando derecho (⌘)")
         case .rightControl: return String(localized: "Control derecho (⌃)")
@@ -30,6 +32,8 @@ enum DictationTrigger: String, CaseIterable, Codable, Sendable {
     /// Advertencia que la UI muestra debajo de la opción, cuando hace falta.
     var caveat: String? {
         switch self {
+        case .commandPeriod:
+            return String(localized: "Mientras Susurro esté abierto, ⌘. deja de llegar a las demás apps, que lo usan para cancelar (y Terminal para interrumpir).")
         case .fn:
             return String(localized: "El sistema usa 🌐 para cambiar el idioma o mostrar emoji. Poné «No hacer nada» en Ajustes › Teclado para que quede libre.")
         case .rightOption:
@@ -48,7 +52,7 @@ enum DictationTrigger: String, CaseIterable, Codable, Sendable {
         case .rightCommand: return [UInt16(kVK_RightCommand)]
         case .rightControl: return [UInt16(kVK_RightControl)]
         case .fn:           return [UInt16(kVK_Function)]
-        case .custom:       return []
+        case .commandPeriod, .custom: return []
         }
     }
 
@@ -58,7 +62,7 @@ enum DictationTrigger: String, CaseIterable, Codable, Sendable {
         case .rightCommand: return .command
         case .rightControl: return .control
         case .fn:           return .function
-        case .custom:       return nil
+        case .commandPeriod, .custom: return nil
         }
     }
 }
@@ -68,6 +72,10 @@ extension KeyboardShortcuts.Name {
     /// toca desde el actor principal —que es donde vive todo el manejo de
     /// teclado—, así que la promesa se cumple.
     @MainActor static let dictate = Self("dictate")
+    /// El atajo fijo de `.commandPeriod`. Va por un nombre aparte para no pisar
+    /// lo que la persona haya grabado en el personalizado.
+    @MainActor static let dictateCommandPeriod = Self(
+        "dictateCommandPeriod", default: .init(.period, modifiers: [.command]))
 }
 
 /// Traduce eventos crudos de teclado en intenciones de dictado.
@@ -128,7 +136,7 @@ final class HotkeyMonitor {
     private var flagsMonitors: [Any] = []
     private var escapeMonitors: [Any] = []
 
-    private var trigger: DictationTrigger = .rightCommand
+    private var trigger: DictationTrigger = .commandPeriod
     private var isModifierDown = false
 
     private let handler: @MainActor (Event) -> Void
@@ -153,15 +161,16 @@ final class HotkeyMonitor {
         self.trigger = trigger
 
         switch trigger {
-        case .custom:
+        case .custom, .commandPeriod:
+            let name: KeyboardShortcuts.Name = trigger == .custom ? .dictate : .dictateCommandPeriod
             // Los atajos con tecla normal van por Carbon (`RegisterEventHotKey`)
             // a través de KeyboardShortcuts: se consumen antes de llegar a la
             // app de adelante y —a diferencia de los monitores globales— no
             // requieren ningún permiso del sistema.
-            KeyboardShortcuts.onKeyDown(for: .dictate) { [weak self] in
+            KeyboardShortcuts.onKeyDown(for: name) { [weak self] in
                 self?.handlePress()
             }
-            KeyboardShortcuts.onKeyUp(for: .dictate) { [weak self] in
+            KeyboardShortcuts.onKeyUp(for: name) { [weak self] in
                 self?.handleRelease()
             }
 

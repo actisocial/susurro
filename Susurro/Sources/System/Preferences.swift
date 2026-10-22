@@ -93,11 +93,11 @@ final class Preferences: @unchecked Sendable {
         self.defaults = defaults
 
         defaults.register(defaults: [
-            Key.trigger: DictationTrigger.rightCommand.rawValue,
+            Key.trigger: DictationTrigger.commandPeriod.rawValue,
             Key.asrModelID: ModelCatalog.firstRunSuggestion.id,
             Key.refinementMode: RefinementMode.light.rawValue,
             Key.refinementModelID: RefinementCatalog.default.id,
-            Key.language: LanguageHint.automatic.rawValue,
+            Key.language: LanguageHint.spanish.rawValue,
             Key.keepsMicrophoneWarm: false,
             Key.restoresClipboard: true,
             Key.playsFeedbackSounds: true,
@@ -108,7 +108,7 @@ final class Preferences: @unchecked Sendable {
         // fuente de verdad son las propiedades y `UserDefaults` es solo su
         // reflejo en disco.
         trigger = DictationTrigger(rawValue: defaults.string(forKey: Key.trigger) ?? "")
-            ?? .rightCommand
+            ?? .commandPeriod
         asrModel = ModelCatalog.model(id: defaults.string(forKey: Key.asrModelID) ?? "")
             ?? ModelCatalog.firstRunSuggestion
         refinementMode = RefinementMode(rawValue: defaults.string(forKey: Key.refinementMode) ?? "")
@@ -116,7 +116,7 @@ final class Preferences: @unchecked Sendable {
         refinementModel = RefinementCatalog.model(
             id: defaults.string(forKey: Key.refinementModelID) ?? "") ?? RefinementCatalog.default
         language = LanguageHint(rawValue: defaults.string(forKey: Key.language) ?? "")
-            ?? .automatic
+            ?? .spanish
         keepsMicrophoneWarm = defaults.bool(forKey: Key.keepsMicrophoneWarm)
         restoresClipboard = defaults.bool(forKey: Key.restoresClipboard)
         playsFeedbackSounds = defaults.bool(forKey: Key.playsFeedbackSounds)

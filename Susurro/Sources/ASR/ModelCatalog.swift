@@ -223,13 +223,9 @@ enum ModelCatalog {
 
     /// Qué modelo proponer en el primer arranque.
     ///
-    /// En macOS 26 o superior conviene arrancar con el motor del sistema: la
-    /// app funciona en el mismo segundo en que se instala, sin media hora de
-    /// descarga antes de poder probar nada. La HIG lo dice explícitamente («no
-    /// dejes que una descarga grande entorpezca la puesta en marcha»), y es
-    /// además donde más gente abandona el onboarding. Parakeet se ofrece
-    /// después, ya con la app funcionando.
-    static var firstRunSuggestion: ASRModel {
-        appleSpeech.isAvailableOnThisMac ? appleSpeech : parakeetV3Int8
-    }
+    /// Whisper, con el idioma en Español (ver `Preferences`). Parakeet es más
+    /// rápido, pero en frases largas que mezclan español con términos en inglés
+    /// a veces devuelve la frase entera en inglés, y no hay forma de fijarle el
+    /// idioma. Whisper sí la tiene.
+    static var firstRunSuggestion: ASRModel { whisperLargeV3Turbo }
 }
