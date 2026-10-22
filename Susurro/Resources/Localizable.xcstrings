@@ -2,6 +2,8 @@
   "sourceLanguage": "es",
   "strings": {
     "": {},
+    "    Abrí Ajustes y tocá «Reparar»": {},
+    "    El texto va al portapapeles": {},
     "%@ %@": {
       "localizations": {
         "es": {
@@ -351,6 +353,7 @@
         }
       }
     },
+    "Continuar igual": {},
     "Control derecho (⌃)": {
       "localizations": {
         "en": {
@@ -595,8 +598,10 @@
       }
     },
     "En esta Mac se pasa del tiempo disponible en casi todos los dictados, y cuando eso pasa el texto se inserta sin corregir. Su 19 % de puntuación es por lentitud, no por capacidad: en una Mac más rápida podría ser el mejor.": {},
+    "Entrada en uso": {},
     "Error en español": {},
     "Es el que mejor limpia cuando contesta, pero en dictados largos con los dos idiomas entreverados no llega a tiempo y ahí el texto sale sin tocar. Además pide 5,6 GB de memoria.": {},
+    "Es el que mejor midió en las pruebas. No hace falta que decidas nada ahora.": {},
     "Es para escuchar lo que dictás. El audio se procesa acá mismo y se descarta apenas se transcribe: no se guarda ni se envía a ningún lado.": {
       "localizations": {
         "en": {
@@ -647,7 +652,6 @@
         }
       }
     },
-    "Estos son los que mejor midieron en las pruebas. No hace falta que decidas nada ahora.": {},
     "Falló la transcripción: %@": {
       "localizations": {
         "en": {
@@ -875,7 +879,6 @@
         }
       }
     },
-    "Medido en esta Mac sobre 46 dictados de prueba.": {},
     "Micrófono": {
       "localizations": {
         "en": {
@@ -1067,7 +1070,6 @@
         }
       }
     },
-    "Para puntuar y sacar muletillas": {},
     "Parakeet 110M (solo inglés)": {
       "localizations": {
         "en": {
@@ -1098,6 +1100,16 @@
         }
       }
     },
+    "Parakeet corre en el Neural Engine: es más rápido que Whisper y más preciso en español. Whisper está para los idiomas que Parakeet no cubre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parakeet runs on the Neural Engine: faster than Whisper and more accurate in Spanish. Whisper is there for the languages Parakeet doesn't cover."
+          }
+        }
+      }
+    },
     "Permisos": {
       "localizations": {
         "en": {
@@ -1118,7 +1130,7 @@
         }
       }
     },
-    "Prefiero elegirlos yo": {},
+    "Prefiero elegirlo yo": {},
     "Preparando el modelo… %lld%%": {
       "localizations": {
         "en": {
@@ -1151,7 +1163,6 @@
     },
     "Puntuación": {},
     "Qwen3 — Alibaba Cloud": {},
-    "Recomendado": {},
     "Reconocimiento de voz": {
       "localizations": {
         "en": {
@@ -1192,6 +1203,9 @@
         }
       }
     },
+    "Reparando…": {},
+    "Reparar": {},
+    "Reparar el permiso": {},
     "Saca las muletillas casi tan bien como los grandes, pero pone poco más de la mitad de las comas y los signos de apertura que hacen falta.": {},
     "Salir de Susurro": {
       "localizations": {
@@ -1203,7 +1217,7 @@
         }
       }
     },
-    "Se descargan ahora, una sola vez: %@. Podés dictar apenas termine el primero.": {},
+    "Se descarga ahora, una sola vez: %@.": {},
     "Se desconectó el micrófono durante el dictado.": {
       "localizations": {
         "en": {
@@ -1287,6 +1301,8 @@
         }
       }
     },
+    "Susurro aparece encendido en Ajustes del Sistema, pero ese permiso quedó atado a una versión anterior de la app y macOS ya no lo reconoce. Apagar y prender el interruptor no alcanza. «Reparar» borra la entrada vieja y vuelve a pedirlo.": {},
+    "Susurro figura encendido en Ajustes del Sistema, pero ese permiso se lo diste a una versión anterior de la app y macOS ya no lo reconoce. Reiniciar no alcanza, y apagar y prender el interruptor tampoco.": {},
     "Susurro necesita acceso al micrófono.": {
       "localizations": {
         "en": {
@@ -1507,7 +1523,10 @@
       }
     },
     "nunca": {},
-    "·": {}
+    "·": {},
+    "¿Ya figura encendido en Ajustes y aun así no anda?": {},
+    "⚠︎ El permiso de Accesibilidad quedó viejo": {},
+    "⚠︎ Falta el permiso de Accesibilidad": {}
   },
   "version": "1.0"
 }

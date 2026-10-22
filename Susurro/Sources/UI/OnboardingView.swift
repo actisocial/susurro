@@ -9,15 +9,12 @@ import SwiftUI
 ///   pantalla que antecede a un permiso no va un botón de «Saltear»: o se
 ///   explica y se pide, o no se pide.
 /// - **Los modelos vienen elegidos, no se preguntan.** Pedirle a alguien que
-///   todavía no usó la app que elija entre cinco modelos de reconocimiento y
-///   cinco de limpieza es descargarle encima una decisión que no tiene con qué
-///   tomar. Susurro elige el que ganó la medición y sigue; el que quiera
+///   todavía no usó la app que elija entre cinco modelos de reconocimiento es
+///   descargarle encima una decisión que no tiene con qué tomar. Susurro elige el que ganó la medición y sigue; el que quiera
 ///   cambiarlo tiene la puerta abierta y señalizada.
 /// - **Pero se cuenta qué se eligió y por qué.** Elegir por la persona sin
 ///   decírselo es lo que hace que después aparezca una descarga de gigas sin
-///   explicación, que fue exactamente lo que pasaba: el último paso mencionaba
-///   el modelo de reconocimiento en una línea al pie y no decía una palabra del
-///   de limpieza, que pesa cinco veces más.
+///   explicación.
 struct OnboardingView: View {
     @Bindable var controller: DictationController
     @Bindable var preferences: Preferences
@@ -159,11 +156,11 @@ struct OnboardingView: View {
         }
     }
 
-    /// Qué modelos quedaron elegidos, por qué, y cuánto pesa eso.
+    /// Qué modelo quedó elegido, por qué, y cuánto pesa.
     ///
     /// El paso existe porque su ausencia se notaba: la app arrancaba y empezaba
-    /// a bajar 3 GB sin haberlo mencionado nunca. La descarga era legítima y las
-    /// elecciones eran las correctas —son las que ganaron el banco— pero nadie
+    /// a bajar gigas sin haberlo mencionado nunca. La descarga era legítima y las
+    /// elecciones eran las correctas pero nadie
     /// se había enterado, y una app que consume gigas en silencio se siente rota
     /// aunque esté haciendo lo que corresponde.
     private var models: some View {
@@ -173,7 +170,7 @@ struct OnboardingView: View {
                 .foregroundStyle(Color.accentColor)
             Text("Ya elegimos por vos")
                 .font(.title2)
-            Text("Estos son los que mejor midieron en las pruebas. No hace falta que decidas nada ahora.")
+            Text("Es el que mejor midió en las pruebas. No hace falta que decidas nada ahora.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -185,37 +182,25 @@ struct OnboardingView: View {
                     name: preferences.asrModel.displayName,
                     reason: preferences.asrModel.tagline,
                     size: preferences.asrModel.formattedDownloadSize)
-
-                if preferences.refinementMode != .off {
-                    ChosenModel(
-                        role: String(localized: "Para puntuar y sacar muletillas"),
-                        name: preferences.refinementModel.displayName,
-                        reason: preferences.refinementModel.tagline,
-                        size: preferences.refinementModel.formattedDownloadSize)
-                }
             }
             .padding(.top, 2)
 
             // La suma va aparte y en grande: es el número que a alguien le
             // importa antes de que su conexión empiece a trabajar.
-            Text("Se descargan ahora, una sola vez: \(totalDownload). Podés dictar apenas termine el primero.")
+            Text("Se descarga ahora, una sola vez: \(totalDownload).")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Button("Prefiero elegirlos yo") { openSettings() }
+            Button("Prefiero elegirlo yo") { openSettings() }
                 .buttonStyle(.link)
                 .font(.callout)
         }
     }
 
     private var totalDownload: String {
-        var bytes = preferences.asrModel.downloadBytes
-        if preferences.refinementMode != .off {
-            bytes += preferences.refinementModel.downloadBytes
-        }
-        return ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+        ByteCountFormatter.string(fromByteCount: preferences.asrModel.downloadBytes, countStyle: .file)
     }
 
     // MARK: - Navegación

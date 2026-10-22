@@ -21,15 +21,6 @@ project's repository.
   https://github.com/argmaxinc/argmax-oss-swift
   Copyright Argmax, Inc.
 
-  MLX Swift and mlx-swift-lm — MIT License
-  https://github.com/ml-explore/mlx-swift-lm
-  Copyright Apple Inc.
-
-  swift-huggingface, swift-transformers — Apache License 2.0
-  https://github.com/huggingface/swift-huggingface
-  https://github.com/huggingface/swift-transformers
-  Copyright Hugging Face, Inc.
-
   KeyboardShortcuts — MIT License
   https://github.com/sindresorhus/KeyboardShortcuts
   Copyright Sindre Sorhus
@@ -62,11 +53,6 @@ they inherit.
   https://huggingface.co/openai/whisper-large-v3-turbo
   CoreML conversions by Argmax:
   https://huggingface.co/argmaxinc/whisperkit-coreml
-
-  Qwen3.5 2B, Qwen3.5 0.8B
-  Alibaba Cloud — Apache License 2.0
-  https://huggingface.co/Qwen
-  MLX conversions by the mlx-community organization.
 
   Silero VAD
   Silero Team — MIT License

@@ -39,8 +39,8 @@ jobs:
           # comprueba el SDK. `AppleSpeechEngine` usa `SpeechAnalyzer` y
           # `SpeechTranscriber`, que son de macOS 26: con un SDK anterior el
           # build falla con "cannot find type ... in scope" recién después de
-          # veinte minutos de compilar MLX. Comprobarlo acá cuesta un segundo y
-          # el mensaje dice qué pasa.
+          # compilar todo. Comprobarlo acá cuesta un segundo y el mensaje dice
+          # qué pasa.
           NEWEST=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
           sudo xcode-select -s "${NEWEST:-/Applications/Xcode.app}"
           xcodebuild -version
@@ -55,18 +55,6 @@ jobs:
 
       - name: Instalar XcodeGen
         run: brew install xcodegen
-
-      - name: Toolchain de Metal
-        run: |
-          # MLX compila sus propios shaders de Metal durante el build, y desde
-          # Xcode 26 ese toolchain es un componente aparte que no siempre viene
-          # en la imagen del runner. Sin él, el build falla con
-          # "cannot execute tool 'metal'".
-          if xcrun -f metal >/dev/null 2>&1; then
-            echo "ya presente"
-          else
-            xcodebuild -downloadComponent MetalToolchain
-          fi
 
       - name: Resolver la versión
         id: version

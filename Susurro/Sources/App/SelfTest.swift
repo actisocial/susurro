@@ -3,8 +3,7 @@ import Foundation
 
 /// Modo de autodiagnóstico: `Susurro --selftest archivo.wav [...]`.
 ///
-/// Corre el pipeline real —el mismo VAD, el mismo motor, el mismo refinador,
-/// los mismos guardarraíles— sobre archivos de audio en vez de sobre el
+/// Corre el pipeline real —el mismo VAD, el mismo motor— sobre archivos de audio en vez de sobre el
 /// micrófono, e imprime lo que sale y cuánto tardó cada etapa.
 ///
 /// Sirve para dos cosas. Una es poder verificar que la cadena funciona sin
@@ -88,7 +87,7 @@ enum SelfTest {
         }
 
         guard !paths.isEmpty else {
-            print("uso: Susurro --selftest archivo.wav [archivo2.wav …] [--modelo <id>] [--sin-refinado]")
+            print("uso: Susurro --selftest archivo.wav [archivo2.wav …] [--modelo <id>]")
             print("\nmodelos disponibles:")
             for model in ModelCatalog.available {
                 print("  \(model.id.padding(toLength: 24, withPad: " ", startingAt: 0)) \(model.displayName) · \(model.formattedDownloadSize)")
@@ -99,12 +98,8 @@ enum SelfTest {
         let preferences = Preferences.shared
         let requestedModel = value(for: "--modelo").flatMap(ModelCatalog.model(id:))
         let model = requestedModel ?? preferences.asrModel
-        let skipRefinement = CommandLine.arguments.contains("--sin-refinado")
 
         print("modelo de reconocimiento: \(model.displayName) (\(model.id))")
-        if !skipRefinement {
-            print("modelo de refinado:       \(preferences.refinementModel.displayName)")
-        }
         print("")
 
         let store = ModelStore()
@@ -136,31 +131,8 @@ enum SelfTest {
         }
         print("\r✓ modelo listo en \(ms(since: loadStart))")
 
-        var refiner: LocalLLMRefiner?
-        if !skipRefinement {
-            let start = Date()
-            let candidate = LocalLLMRefiner(
-                model: preferences.refinementModel, modelsDirectory: store.rootDirectory)
-            do {
-                try await candidate.prepare { progress in
-                    guard progress.fraction < 1 else { return }
-                    let detail = progress.detail.map { " · \($0)" } ?? ""
-                    print("\r  refinado: \(progress.summary)\(detail)          ", terminator: "")
-                    fflush(stdout)
-                }
-                refiner = candidate
-                print("\r✓ refinador listo en \(ms(since: start))")
-            } catch {
-                print("\r⚠ no se pudo cargar el refinador: \(error.localizedDescription)")
-                print("  se continúa solo con la transcripción cruda")
-            }
-        }
-        print("")
-
         // --- Transcripción ---
         var failures = 0
-        var rejections = 0
-        var timeouts = 0
 
         for path in paths {
             let url = URL(fileURLWithPath: path)
@@ -181,36 +153,8 @@ enum SelfTest {
                     continue
                 }
 
-                print("   crudo:    \(transcript.text)")
+                print("   \(transcript.text)")
                 print("   ↳ \(String(format: "%.0f", transcript.processingDuration * 1000)) ms · \(String(format: "%.0f", transcript.realTimeFactor))× tiempo real")
-
-                let stripped = FillerStripper.strip(transcript.text)
-                if stripped != transcript.text {
-                    print("   limpio:   \(stripped)")
-                }
-
-                if let refiner {
-                    let start = Date()
-                    let refinement = await refiner.refine(
-                        stripped,
-                        mode: preferences.refinementMode,
-                        language: preferences.language)
-                    print("   refinado: \(refinement.text)")
-                    print("   ↳ \(ms(since: start)) · \(refinement.description)")
-
-                    // Un rechazo NO es un fallo: es el guardarraíl haciendo su
-                    // trabajo, y el texto crudo que se insertó es correcto. Se
-                    // cuenta aparte para poder ver si empiezan a ser demasiados
-                    // —eso sí indicaría un refinador roto—, pero no tumba la
-                    // corrida. Un timeout tampoco es un error de resultado, pero
-                    // sí es una señal de que el modelo no entra en su
-                    // presupuesto en esta máquina.
-                    switch refinement.status {
-                    case .rejected: rejections += 1
-                    case .timedOut: timeouts += 1
-                    default: break
-                    }
-                }
             } catch {
                 print("   ✗ \(error.localizedDescription)")
                 failures += 1
@@ -218,16 +162,6 @@ enum SelfTest {
             print("")
         }
 
-        // Igual que en el banco: no se puede llamar a `exit()` con un hilo
-        // todavía adentro de MLX.
-        await refiner?.drain()
-
-        if rejections > 0 {
-            print("· \(rejections) refinado(s) rechazado(s) por los guardarraíles — se insertó el texto crudo, que es el comportamiento correcto")
-        }
-        if timeouts > 0 {
-            print("⚠ \(timeouts) refinado(s) fuera de presupuesto de tiempo en esta máquina")
-        }
         print(failures == 0 ? "✓ todo bien" : "✗ \(failures) fallo(s)")
         return failures == 0 ? 0 : 1
     }

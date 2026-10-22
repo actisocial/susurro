@@ -77,7 +77,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func syncHUD() {
         switch controller.state {
-        case .listening, .transcribing, .refining:
+        case .listening, .transcribing:
             hud.show()
         default:
             hud.hide()

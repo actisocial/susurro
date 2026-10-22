@@ -13,8 +13,7 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     # Solo Apple Silicon, y no por comodidad: los modelos de Parakeet son CoreML
-    # compilados para el Neural Engine, y MLX necesita el Metal de las GPU de
-    # Apple. En un Intel la app no tendría con qué correr. Declararlo acá evita
+    # compilados para el Neural Engine. En un Intel la app no tendría con qué correr. Declararlo acá evita
     # además compilar todo dos veces, que duplicaba el tiempo de build.
     ARCHS: arm64
     ONLY_ACTIVE_ARCH: NO
@@ -47,18 +46,6 @@ packages:
   ArgmaxOSS:
     url: https://github.com/argmaxinc/argmax-oss-swift
     from: 1.0.0
-  # La biblioteca de LLM de MLX, separada de mlx-swift-examples. Trae Qwen3.5
-  # ya registrado. No incluye descargador ni tokenizador: se integran aparte,
-  # que es como está diseñada.
-  MLXSwiftLM:
-    url: https://github.com/ml-explore/mlx-swift-lm
-    from: 3.31.4
-  SwiftHuggingFace:
-    url: https://github.com/huggingface/swift-huggingface
-    from: 0.9.0
-  SwiftTransformers:
-    url: https://github.com/huggingface/swift-transformers
-    from: 1.3.3
 
 targets:
   Susurro:
@@ -75,18 +62,6 @@ targets:
         product: KeyboardShortcuts
       - package: ArgmaxOSS
         product: WhisperKit
-      - package: MLXSwiftLM
-        product: MLXLLM
-      - package: MLXSwiftLM
-        product: MLXLMCommon
-      - package: MLXSwiftLM
-        product: MLXHuggingFace
-      - package: MLXSwiftLM
-        product: MLX
-      - package: SwiftHuggingFace
-        product: HuggingFace
-      - package: SwiftTransformers
-        product: Tokenizers
     entitlements:
       path: Susurro/Susurro.entitlements
       properties:

@@ -129,10 +129,6 @@ private struct HUDView: View {
             Text("Transcribiendo…")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
-        case .refining:
-            Text("Puliendo…")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.secondary)
         default:
             EmptyView()
         }

@@ -11,12 +11,11 @@ enum DictationState: Equatable {
     case preparing(PreparationProgress)
     case listening(locked: Bool)
     case transcribing
-    case refining
     case failed(String)
 
     var isBusy: Bool {
         switch self {
-        case .listening, .transcribing, .refining: return true
+        case .listening, .transcribing: return true
         default: return false
         }
     }
@@ -27,11 +26,10 @@ enum DictationState: Equatable {
     }
 }
 
-/// El coordinador del dictado: escucha el gatillo, graba, transcribe, refina e
-/// inserta.
+/// El coordinador del dictado: escucha el gatillo, graba, transcribe e inserta.
 ///
 /// Todo el flujo vive acá y en un solo hilo (el principal) a propósito. El
-/// trabajo pesado está en actores —captura, ASR, LLM— pero las *transiciones de
+/// trabajo pesado está en actores —captura, ASR— pero las *transiciones de
 /// estado* son secuenciales y ordenadas. Handy terminó necesitando un
 /// coordinador de un solo hilo con tests llamados
 /// `push_to_talk_release_while_recording_defers_release` justamente porque
@@ -44,16 +42,6 @@ final class DictationController {
     // MARK: - Estado observable
 
     private(set) var state: DictationState = .idle
-
-    /// Progreso del modelo de limpieza, o `nil` si no hay nada en curso.
-    ///
-    /// Va aparte de `state` porque son dos cosas independientes: el refinado se
-    /// prepara *sin bloquear* —el dictado crudo tiene que andar aunque el LLM
-    /// todavía no esté— así que puede estar bajando mientras el estado ya es
-    /// `.idle` y se puede dictar. Meterlo en la misma máquina de estados
-    /// obligaría a elegir cuál de las dos cosas contar, y hoy la respuesta era
-    /// no contar ninguna: se llamaba con `{ _ in }` y 2,5 GB bajaban en secreto.
-    private(set) var refinementProgress: PreparationProgress?
 
     /// Nombre del micrófono en uso, para mostrarlo en Ajustes.
     private(set) var inputDeviceName: String?
@@ -80,7 +68,6 @@ final class DictationController {
     /// tipo en una propiedad de una clase que compila para macOS 14. Se guarda
     /// como existencial y se recupera con un cast dentro del `#available`.
     private var appleEngineBox: (any SpeechEngine)?
-    private var refiner: LocalLLMRefiner
 
     private var hotkeys: HotkeyMonitor?
 
@@ -103,9 +90,6 @@ final class DictationController {
         self.permissions = Permissions()
         self.store = ModelStore()
         self.parakeet = ParakeetEngine(store: store)
-        self.refiner = LocalLLMRefiner(
-            model: preferences.refinementModel,
-            modelsDirectory: store.rootDirectory)
     }
 
     func start() {
@@ -122,29 +106,6 @@ final class DictationController {
         pipelineTask?.cancel()
         startSoundTask?.cancel()
         Task { await capture.shutdown() }
-        waitForRefinerToSettle()
-    }
-
-    /// Bloquea un instante para que ninguna generación quede corriendo dentro de
-    /// MLX cuando el proceso termine.
-    ///
-    /// Al salir se destruyen los objetos estáticos de MLX —entre ellos la caché
-    /// de kernels de Metal—, y un hilo que siga generando en ese momento los usa
-    /// después de liberados: SIGSEGV al cerrar. Sólo puede pasar si el último
-    /// dictado expiró por tiempo y se cierra la app enseguida, así que en la
-    /// práctica la espera es de cero.
-    ///
-    /// Se bloquea a propósito, con tope: `applicationWillTerminate` es
-    /// sincrónico y el proceso muere al volver, así que una tarea suelta no
-    /// llegaría a correr. El tope existe porque colgar el cierre es peor que el
-    /// crash que evita.
-    private func waitForRefinerToSettle() {
-        let done = DispatchSemaphore(value: 0)
-        Task.detached(priority: .userInitiated) { [refiner] in
-            await refiner.drain()
-            done.signal()
-        }
-        _ = done.wait(timeout: .now() + 2)
     }
 
     // MARK: - Gatillo
@@ -251,7 +212,7 @@ final class DictationController {
         }
     }
 
-    /// Audio → texto → refinado → inserción.
+    /// Audio → texto → inserción.
     private func runPipeline(on samples: [Float]) async {
         let duration = Double(samples.count) / AudioCapture.targetSampleRate
 
@@ -302,29 +263,8 @@ final class DictationController {
             return
         }
 
-        // La limpieza determinista corre siempre, incluso con el refinado
-        // apagado: no cuesta nada, no puede equivocarse y deja al LLM un texto
-        // mejor del que partir.
-        var text = preferences.refinementMode == .off
-            ? transcript.text
-            : FillerStripper.strip(transcript.text)
-
-        if preferences.refinementMode != .off, await refiner.isReady {
-            state = .refining
-            let refinement = await refiner.refine(
-                text, mode: preferences.refinementMode, language: preferences.language)
-            text = refinement.text
-            if refinement.status.isProblem {
-                // No se le avisa a la persona: el texto crudo ya viene puntuado
-                // y es perfectamente utilizable, así que un cartel de error
-                // sería ruido por algo que se resolvió solo. Queda en el log
-                // para poder diagnosticar un refinador que falle sistemáticamente.
-                logger.notice("refinado descartado: \(refinement.description, privacy: .public)")
-            }
-        }
-
-        lastTranscript = text
-        let outcome = await injector.insert(text, into: pendingTarget)
+        lastTranscript = transcript.text
+        let outcome = await injector.insert(transcript.text, into: pendingTarget)
 
         switch outcome {
         case .inserted:
@@ -403,37 +343,6 @@ final class DictationController {
         // grafo de audio sin encender el indicador naranja.
         try? await capture.prepare()
         await capture.setKeepsWarm(preferences.keepsMicrophoneWarm)
-
-        // El LLM se carga después y sin bloquear: el dictado crudo tiene que
-        // funcionar aunque el refinado todavía no esté listo.
-        if preferences.refinementMode != .off {
-            prepareRefiner()
-        }
-    }
-
-    /// Prepara el modelo de limpieza en segundo plano, informando el avance.
-    ///
-    /// Se llama desde tres lugares distintos —arranque, cambio de modelo, cambio
-    /// de modo— y en los tres estaba escrito como `prepare { _ in }`. Ese
-    /// descarte repetido era todo el motivo por el que la descarga más pesada de
-    /// la app no se veía en ningún lado.
-    private func prepareRefiner() {
-        // El reporte se arma acá, todavía en el actor principal, y al task
-        // desprendido viaja solo un closure `Sendable`. Capturar `self` adentro
-        // del task y después saltar de vuelta al actor principal compila mal en
-        // Swift 6 —y con razón: sería mandar una referencia aislada afuera de su
-        // actor para leerla desde cualquier hilo.
-        let report: @Sendable (PreparationProgress?) -> Void = { [weak self] progress in
-            Task { @MainActor in self?.refinementProgress = progress }
-        }
-
-        Task.detached(priority: .utility) { [refiner] in
-            defer { report(nil) }
-            try? await refiner.prepare { progress in
-                guard progress.fraction < 1 else { return }
-                report(progress)
-            }
-        }
     }
 
     /// Cambia el modelo de reconocimiento y lo deja listo.
@@ -442,12 +351,6 @@ final class DictationController {
         await parakeet.unload()
         await whisper?.unload()
         await prepareEngines()
-    }
-
-    func switchRefinementModel(to model: RefinementModel) async {
-        preferences.refinementModel = model
-        await refiner.use(model)
-        prepareRefiner()
     }
 
     // MARK: - Acciones desde la interfaz
@@ -489,14 +392,6 @@ final class DictationController {
 
     func applyMicrophonePreference() {
         Task { await capture.setKeepsWarm(preferences.keepsMicrophoneWarm) }
-    }
-
-    func applyRefinementPreference() async {
-        if preferences.refinementMode == .off {
-            await refiner.unload()
-        } else if await !refiner.isReady {
-            prepareRefiner()
-        }
     }
 
     // MARK: - Reacción al entorno
@@ -591,5 +486,26 @@ final class DictationController {
             try? await Task.sleep(for: .seconds(4))
             if case .failed = state { state = .idle }
         }
+    }
+}
+
+// MARK: - Presupuesto de tiempo
+
+struct TimeoutError: Error {}
+
+/// Corre una operación con techo de tiempo.
+func withTimeout<T: Sendable>(
+    _ duration: Duration,
+    operation: @escaping @Sendable () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask { try await operation() }
+        group.addTask {
+            try await Task.sleep(for: duration)
+            throw TimeoutError()
+        }
+        defer { group.cancelAll() }
+        guard let result = try await group.next() else { throw TimeoutError() }
+        return result
     }
 }

@@ -35,8 +35,6 @@ final class Preferences: @unchecked Sendable {
     private enum Key {
         static let trigger = "trigger"
         static let asrModelID = "asrModelID"
-        static let refinementMode = "refinementMode"
-        static let refinementModelID = "refinementModelID"
         static let language = "language"
         static let keepsMicrophoneWarm = "keepsMicrophoneWarm"
         static let restoresClipboard = "restoresClipboard"
@@ -52,14 +50,6 @@ final class Preferences: @unchecked Sendable {
 
     var asrModel: ASRModel {
         didSet { defaults.set(asrModel.id, forKey: Key.asrModelID) }
-    }
-
-    var refinementMode: RefinementMode {
-        didSet { defaults.set(refinementMode.rawValue, forKey: Key.refinementMode) }
-    }
-
-    var refinementModel: RefinementModel {
-        didSet { defaults.set(refinementModel.id, forKey: Key.refinementModelID) }
     }
 
     var language: LanguageHint {
@@ -95,8 +85,6 @@ final class Preferences: @unchecked Sendable {
         defaults.register(defaults: [
             Key.trigger: DictationTrigger.rightCommand.rawValue,
             Key.asrModelID: ModelCatalog.firstRunSuggestion.id,
-            Key.refinementMode: RefinementMode.light.rawValue,
-            Key.refinementModelID: RefinementCatalog.default.id,
             Key.language: LanguageHint.automatic.rawValue,
             Key.keepsMicrophoneWarm: false,
             Key.restoresClipboard: true,
@@ -111,10 +99,6 @@ final class Preferences: @unchecked Sendable {
             ?? .rightCommand
         asrModel = ModelCatalog.model(id: defaults.string(forKey: Key.asrModelID) ?? "")
             ?? ModelCatalog.firstRunSuggestion
-        refinementMode = RefinementMode(rawValue: defaults.string(forKey: Key.refinementMode) ?? "")
-            ?? .light
-        refinementModel = RefinementCatalog.model(
-            id: defaults.string(forKey: Key.refinementModelID) ?? "") ?? RefinementCatalog.default
         language = LanguageHint(rawValue: defaults.string(forKey: Key.language) ?? "")
             ?? .automatic
         keepsMicrophoneWarm = defaults.bool(forKey: Key.keepsMicrophoneWarm)

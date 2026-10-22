@@ -136,44 +136,6 @@ struct PreparationProgressTests {
     }
 }
 
-struct RefinementCacheTests {
-
-    /// Si este nombre no coincide con el que usa la caché de Hugging Face, el
-    /// medidor apunta a un directorio inexistente, mide cero, y la barra del
-    /// modelo de limpieza se queda clavada sin que falle nada. Un error que no
-    /// rompe nada es el que más tarda en encontrarse.
-    @Test("el nombre de carpeta coincide con el de la caché de Hugging Face")
-    func cacheFolderMatchesHubLayout() {
-        #expect(
-            RefinementCatalog.qwen35_2b_8bit.cacheFolderName
-                == "models--mlx-community--Qwen3.5-2B-8bit")
-    }
-
-    @Test("todos los modelos del catálogo derivan una carpeta válida")
-    func everyModelHasAFolder() {
-        for model in RefinementCatalog.all {
-            #expect(model.cacheFolderName.hasPrefix("models--"))
-            #expect(!model.cacheFolderName.contains("/"))
-        }
-    }
-
-    /// El 4B volvió al catálogo. Estuvo afuera para que nadie lo eligiera por el
-    /// nombre; ahora está adentro con sus cifras y su advertencia, que es la
-    /// forma honesta de resolver lo mismo.
-    @Test("el 4B está en el catálogo, y con su advertencia")
-    func fourBIsListedWithItsCaveat() {
-        #expect(RefinementCatalog.all.contains { $0.id == RefinementCatalog.qwen35_4b.id })
-        #expect(RefinementCatalog.qwen35_4b.metrics.caveat != nil)
-    }
-
-    /// El recomendado no puede quedar con una advertencia: si la tiene, o la
-    /// advertencia sobra o el recomendado está mal elegido.
-    @Test("el recomendado no arrastra advertencias")
-    func defaultHasNoCaveat() {
-        #expect(RefinementCatalog.default.metrics.caveat == nil)
-    }
-}
-
 struct DownloadMeterTests {
 
     @Test("cuenta lo que hay en disco, incluidos los archivos a medias")

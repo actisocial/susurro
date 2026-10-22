@@ -340,45 +340,7 @@ private struct ModelSettings: View {
             } header: {
                 Text("Reconocimiento de voz")
             } footer: {
-                Text("Parakeet corre en el Neural Engine: es más rápido que Whisper y más preciso en español, y deja la GPU libre para el refinado. Whisper está para los idiomas que Parakeet no cubre.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Section {
-                Picker("Refinado", selection: modeBinding) {
-                    ForEach(RefinementMode.allCases, id: \.self) { mode in
-                        Text(mode.label).tag(mode)
-                    }
-                }
-                Text(preferences.refinementMode.explanation)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if preferences.refinementMode != .off {
-                    // Antes esto era un menú desplegable con nombre y tamaño, y
-                    // el texto explicativo de abajo hablaba solo del que ya
-                    // estaba elegido. O sea que para comparar dos modelos había
-                    // que elegir uno, leer, elegir el otro, leer —y en el
-                    // camino disparar dos descargas de gigas—. Con filas, las
-                    // cifras de todos están a la vista sin tocar nada.
-                    ForEach(RefinementCatalog.all) { model in
-                        RefinementRow(
-                            model: model,
-                            isSelected: preferences.refinementModel.id == model.id,
-                            isRecommended: model.id == RefinementCatalog.default.id,
-                            progress: preferences.refinementModel.id == model.id
-                                ? controller.refinementProgress : nil,
-                            select: { Task { await controller.switchRefinementModel(to: model) } }
-                        )
-                    }
-                }
-            } header: {
-                Text("Limpieza del texto")
-            } footer: {
-                Text("Si el modelo tarda más de un segundo y medio, o si devuelve algo que no se parece a lo que dictaste, Susurro descarta el refinado e inserta la transcripción cruda. Nunca vas a recibir una respuesta del modelo en vez de tu texto.")
+                Text("Parakeet corre en el Neural Engine: es más rápido que Whisper y más preciso en español. Whisper está para los idiomas que Parakeet no cubre.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -406,68 +368,6 @@ private struct ModelSettings: View {
         return nil
     }
 
-    private var modeBinding: Binding<RefinementMode> {
-        Binding(
-            get: { preferences.refinementMode },
-            set: {
-                preferences.refinementMode = $0
-                Task { await controller.applyRefinementPreference() }
-            })
-    }
-
-}
-
-/// Fila de un modelo de limpieza. Misma anatomía que la de reconocimiento, pero
-/// con la marca de recomendado, que en este catálogo sí está respaldada por
-/// mediciones propias.
-private struct RefinementRow: View {
-    let model: RefinementModel
-    let isSelected: Bool
-    let isRecommended: Bool
-    let progress: PreparationProgress?
-    let select: () -> Void
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
-                .foregroundStyle(isSelected ? Color.accentColor : .secondary)
-                .font(.system(size: 15))
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(model.displayName).fontWeight(.medium)
-                    if isRecommended {
-                        Text("Recomendado")
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color.accentColor.opacity(0.15), in: .capsule)
-                            .foregroundStyle(Color.accentColor)
-                    }
-                }
-                Text(model.tagline)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                MetricsStrip(metrics: model.metrics)
-
-                Text("\(model.formattedDownloadSize) · \(model.license)")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-
-                if let progress {
-                    PreparationStrip(progress: progress)
-                        .padding(.top, 2)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .contentShape(.rect)
-        .onTapGesture(perform: select)
-        .padding(.vertical, 2)
-    }
 }
 
 private struct ModelRow: View {
@@ -623,10 +523,6 @@ private struct AboutSettings: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Qwen3 — Alibaba Cloud").font(.callout)
-                    Text("Apache-2.0").font(.caption).foregroundStyle(.secondary)
-                }
-                VStack(alignment: .leading, spacing: 1) {
                     Text("Silero VAD").font(.callout)
                     Text("MIT").font(.caption).foregroundStyle(.secondary)
                 }
@@ -635,7 +531,6 @@ private struct AboutSettings: View {
             Section("Bibliotecas") {
                 Text("FluidAudio · Apache-2.0").font(.callout)
                 Text("WhisperKit (argmax-oss-swift) · MIT").font(.callout)
-                Text("MLX Swift · MIT").font(.callout)
                 Text("KeyboardShortcuts · MIT").font(.callout)
             }
         }
